@@ -5,380 +5,752 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mental Math Trainer</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            -webkit-tap-highlight-color: transparent; /* Remove tap flash on mobile */
+            -webkit-tap-highlight-color: transparent;
         }
-        /* Feedback transition */
-        #feedback-container.hidden {
+        .font-mono {
+            font-family: 'Fira Code', monospace;
+        }
+        /* Transitions */
+        .fade-enter-active {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Bit Switch Toggle Animation */
+        .bit-switch {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .bit-switch::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
             opacity: 0;
-            transform: translateY(10px);
-            max-height: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-            margin-top: 0;
+            transition: opacity 0.2s;
         }
-        #feedback-container {
+        .bit-switch:hover::after {
             opacity: 1;
-            transform: translateY(0);
-            max-height: 100px; /* Adjust as needed */
-            transition: all 0.3s ease-in-out;
-            margin-top: 1rem; /* mt-4 */
+        }
+        
+        .bit-on {
+            background-color: #4ade80; /* green-400 */
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+            border-color: #22c55e;
+            color: #064e3b;
+            transform: translateY(1px);
+        }
+        .bit-off {
+            background-color: #1f2937; /* gray-800 */
+            border-color: #374151;
+            color: #4b5563;
+            box-shadow: 0 4px 0 #111827; /* Raised 3D effect */
+            transform: translateY(-2px);
+        }
+        .bit-off:active {
+            transform: translateY(1px);
+            box-shadow: 0 0 0 #111827;
+        }
+        
+        /* Interactive bits for Level 7 */
+        .bit-interactive {
+            cursor: pointer;
+        }
+        .bit-interactive:hover {
+            border-color: #6366f1; /* indigo-500 */
+        }
+
+        /* Helper numbers visibility */
+        .hint-text {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .show-hint .hint-text {
+            opacity: 1;
+        }
+
+        /* Feedback Animation */
+        #feedback-bar {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: top;
+        }
+        #feedback-bar.hidden {
+            transform: scaleY(0);
+            opacity: 0;
+            height: 0;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Modal Backdrop */
+        #modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
 
-    <main class="w-full max-w-md mx-auto">
-        <div id="card" class="bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 min-h-[350px] flex flex-col justify-between">
-            
-            <!-- Header: Level & Streak -->
-            <header class="flex justify-between items-center mb-6">
-                <span id="level-el" class="text-xl font-bold text-indigo-400">Level 1</span>
-                <span id="streak-el" class="text-lg font-medium text-green-400">Streak: 0</span>
-            </header>
+    <!-- Navbar -->
+    <nav class="w-full p-4 flex justify-between items-center bg-gray-800 shadow-md z-10 border-b border-gray-700">
+        <div class="text-xl font-bold tracking-tight text-indigo-400 cursor-pointer hover:text-indigo-300 transition" onclick="location.reload()">
+            🧠 MentalMath<span class="text-white">Master</span>
+        </div>
+        <button id="exit-btn" class="hidden text-sm font-medium text-gray-400 hover:text-white transition flex items-center gap-2">
+            <span>Exit</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+        </button>
+    </nav>
 
-            <!-- Problem Area -->
-            <div class="text-center flex-grow flex flex-col items-center justify-center">
-                <div id="problem-container" class="text-4xl md:text-5xl font-bold text-white min-h-[100px] flex items-center justify-center">
-                    <!-- Problem will be injected here -->
+    <main class="flex-grow flex items-center justify-center p-4 w-full max-w-2xl mx-auto relative">
+        
+        <!-- VIEW: MENU -->
+        <div id="menu-view" class="w-full space-y-8 text-center fade-enter-active">
+            <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 mb-2">
+                Train Your Brain
+            </h1>
+            <p class="text-gray-400 text-lg mb-8">Select a training mode</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Card: Career -->
+                <button onclick="app.startCareer()" class="group relative bg-gray-800 hover:bg-indigo-900/40 border border-gray-700 hover:border-indigo-500 rounded-xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl flex flex-col items-center">
+                    <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">🏆</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Career</h3>
+                    <p class="text-sm text-gray-400">Progress through levels. Build your streak.</p>
+                </button>
+
+                <!-- Card: Practice -->
+                <button onclick="app.showPracticeMenu()" class="group relative bg-gray-800 hover:bg-emerald-900/40 border border-gray-700 hover:border-emerald-500 rounded-xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl flex flex-col items-center">
+                    <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">🎯</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Practice</h3>
+                    <p class="text-sm text-gray-400">Choose specific skills. No pressure.</p>
+                </button>
+
+                <!-- Card: Timed -->
+                <button onclick="app.startTimed()" class="group relative bg-gray-800 hover:bg-orange-900/40 border border-gray-700 hover:border-orange-500 rounded-xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl flex flex-col items-center">
+                    <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">⏱️</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Timed Run</h3>
+                    <p class="text-sm text-gray-400">10 minutes. Infinite chaos. High score.</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW: PRACTICE SELECTOR -->
+        <div id="practice-view" class="hidden w-full text-center fade-enter-active">
+            <h2 class="text-3xl font-bold mb-6">Select Level</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="app.startPractice(1)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 1: Arithmetic</button>
+                <button onclick="app.startPractice(2)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 2: Advanced</button>
+                <button onclick="app.startPractice(3)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 3: Fractions/%</button>
+                <button onclick="app.startPractice(4)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 4: Algebra</button>
+                <button onclick="app.startPractice(5)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 5: Logic/Seq</button>
+                
+                <div class="col-span-2 grid grid-cols-2 gap-4 mt-2">
+                     <button onclick="app.startPractice(6)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 border-indigo-500/30 hover:border-indigo-500 text-indigo-300 transition">
+                         Lvl 6: Read Binary
+                         <span class="block text-xs text-gray-500 mt-1">1010 → 10</span>
+                     </button>
+                     <button onclick="app.startPractice(7)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 border-indigo-500/30 hover:border-indigo-500 text-indigo-300 transition">
+                         Lvl 7: Write Binary
+                         <span class="block text-xs text-gray-500 mt-1">10 → 1010</span>
+                     </button>
                 </div>
             </div>
-
-            <!-- Feedback Area (shown on submit) -->
-            <div id="feedback-container" class="hidden text-center text-xl font-medium p-4 rounded-lg">
-                <!-- Feedback: "Correct!" or "Incorrect. Answer: 42" -->
-            </div>
-
-            <!-- Answer Form -->
-            <form id="answer-form" class="mt-8">
-                <input type="text" id="answer-input" inputmode="numeric" pattern="[0-9.-]*"
-                       class="w-full text-center text-3xl font-bold p-4 rounded-lg bg-gray-700 text-white border-2 border-gray-600 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400 outline-none transition duration-200"
-                       placeholder="Your Answer" required autocomplete="off">
-                
-                <button type="submit" id="submit-btn"
-                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-lg text-lg shadow-lg transition duration-200 mt-4">
-                    Submit
-                </button>
-            </form>
-
+            <button onclick="app.goHome()" class="mt-8 text-gray-500 hover:text-white transition">Back to Menu</button>
         </div>
+
+        <!-- VIEW: GAME -->
+        <div id="game-view" class="hidden w-full max-w-md fade-enter-active">
+            <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 min-h-[400px] flex flex-col justify-between relative overflow-hidden border border-gray-700">
+                
+                <!-- Game Header -->
+                <header class="flex justify-between items-center mb-6 text-sm font-bold uppercase tracking-wider relative z-10">
+                    <span id="game-info-left" class="text-indigo-400">Level 1</span>
+                    <span id="game-info-right" class="text-green-400">Streak: 0</span>
+                </header>
+
+                <!-- Timer Bar -->
+                <div id="timer-container" class="hidden absolute top-0 left-0 w-full h-1 bg-gray-700 z-0">
+                    <div id="timer-bar" class="h-full bg-orange-500 transition-all duration-1000 ease-linear" style="width: 100%"></div>
+                </div>
+                
+                <!-- Binary Controls (Only Level 6/7) -->
+                <div id="binary-controls" class="hidden flex justify-end gap-2 mb-2">
+                    <button onclick="app.toggleHint()" id="hint-btn" class="text-xs px-2 py-1 rounded bg-gray-700 text-indigo-300 hover:bg-gray-600 transition">
+                        💡 Hint
+                    </button>
+                    <button onclick="app.toggleHelp()" class="text-xs px-2 py-1 rounded bg-gray-700 text-indigo-300 hover:bg-gray-600 transition">
+                        ❓ Help
+                    </button>
+                </div>
+
+                <!-- Problem Container -->
+                <div class="flex-grow flex flex-col items-center justify-center py-4">
+                    <div id="problem-area" class="text-center w-full transition-all duration-200">
+                        <!-- Content Injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Feedback Area -->
+                <div id="feedback-bar" class="hidden text-center text-lg font-bold p-3 rounded-lg mb-4"></div>
+
+                <!-- Input Area -->
+                <form id="answer-form" class="mt-2" autocomplete="off">
+                    <input type="text" id="answer-input" inputmode="numeric" pattern="[0-9.-]*"
+                           class="w-full text-center text-4xl font-bold p-4 rounded-xl bg-gray-900 text-white border-2 border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none transition duration-200 placeholder-gray-700 font-mono"
+                           placeholder="?" required>
+                    
+                    <button type="submit" id="submit-btn"
+                            class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-lg transition duration-200 mt-4 active:scale-[0.98]">
+                        Submit
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VIEW: RESULTS (Timed Mode) -->
+        <div id="results-view" class="hidden w-full text-center max-w-md fade-enter-active">
+            <div class="bg-gray-800 rounded-2xl p-8 shadow-2xl border border-gray-700">
+                <h2 class="text-3xl font-bold text-white mb-2">Time's Up!</h2>
+                <div class="text-6xl font-black text-indigo-400 mb-6" id="final-score">0</div>
+                <p class="text-gray-400 mb-8">Problems Solved</p>
+                <button onclick="app.goHome()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition">Main Menu</button>
+            </div>
+        </div>
+
     </main>
+    
+    <!-- MODAL: Binary Help -->
+    <div id="help-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div id="modal-backdrop" class="absolute inset-0" onclick="app.toggleHelp()"></div>
+        <div class="bg-gray-800 rounded-xl p-6 md:p-8 max-w-sm w-full relative z-10 shadow-2xl border border-gray-700">
+            <h3 class="text-2xl font-bold text-white mb-4">How Binary Works</h3>
+            <p class="text-gray-300 mb-4 leading-relaxed">
+                Computers count using switches that are either <strong>ON (1)</strong> or <strong>OFF (0)</strong>.
+            </p>
+            <p class="text-gray-300 mb-4 leading-relaxed">
+                Each switch doubles in value from right to left:
+            </p>
+            <div class="flex justify-center gap-2 mb-6 font-mono text-sm">
+                <div class="text-center"><div class="p-2 bg-gray-700 rounded mb-1">8</div></div>
+                <div class="text-center"><div class="p-2 bg-gray-700 rounded mb-1">4</div></div>
+                <div class="text-center"><div class="p-2 bg-gray-700 rounded mb-1">2</div></div>
+                <div class="text-center"><div class="p-2 bg-gray-700 rounded mb-1">1</div></div>
+            </div>
+            <p class="text-gray-300 mb-6 text-sm">
+                To read a number, add up the values of the switches that are ON. 
+                <br><span class="text-indigo-400 mt-1 block">Example: 8 + 1 = 9</span>
+            </p>
+            <button onclick="app.toggleHelp()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition">Got it!</button>
+        </div>
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // DOM Elements
-            const levelEl = document.getElementById('level-el');
-            const streakEl = document.getElementById('streak-el');
-            const problemEl = document.getElementById('problem-container');
-            const feedbackContainer = document.getElementById('feedback-container');
-            const answerForm = document.getElementById('answer-form');
-            const answerInput = document.getElementById('answer-input');
-            const submitBtn = document.getElementById('submit-btn');
-
-            // App State
-            let state = {
-                level: 1,
-                streak: 0,
-                currentProblem: null,
-                isSubmitting: false, // Prevent double-submit
-            };
-
-            const STATE_KEY = 'mentalMathState';
-
-            // --- Core Logic ---
-
-            /**
-             * Generates a random integer between min and max (inclusive)
-             */
-            function rand(min, max) {
-                return Math.floor(Math.random() * (max - min + 1)) + min;
-            }
-
-            /**
-             * Generates a problem object { question, answer } based on the level
-             */
-            function generateProblem(level) {
-                let q = '';
-                let a = ''; // Answer will always be a string for comparison
-
-                switch (level) {
-                    case 1: // Basic Arithmetic
-                        {
-                            const op = rand(1, 4);
-                            if (op === 1) { // Addition
-                                const aVal = rand(10, 99);
-                                const bVal = rand(10, 99);
-                                q = `${aVal} + ${bVal}`;
-                                a = `${aVal + bVal}`;
-                            } else if (op === 2) { // Subtraction
-                                const aVal = rand(20, 100);
-                                const bVal = rand(10, aVal - 5);
-                                q = `${aVal} - ${bVal}`;
-                                a = `${aVal - bVal}`;
-                            } else if (op === 3) { // Multiplication
-                                const aVal = rand(2, 12);
-                                const bVal = rand(2, 12);
-                                q = `${aVal} &times; ${bVal}`;
-                                a = `${aVal * bVal}`;
-                            } else { // Division
-                                const bVal = rand(2, 12);
-                                const ans = rand(2, 12);
-                                const aVal = bVal * ans;
-                                q = `${aVal} &divide; ${bVal}`;
-                                a = `${ans}`;
-                            }
-                        }
-                        break;
-
-                    case 2: // Two-Step Arithmetic
-                        {
-                            const op = rand(1, 4);
-                            if (op === 1) { // (a * b) + c
-                                const aVal = rand(3, 12);
-                                const bVal = rand(3, 12);
-                                const cVal = rand(5, 25);
-                                q = `(${aVal} &times; ${bVal}) + ${cVal}`;
-                                a = `${aVal * bVal + cVal}`;
-                            } else if (op === 2) { // a - (b * c)
-                                const bVal = rand(3, 9);
-                                const cVal = rand(3, 9);
-                                const aVal = rand(bVal * cVal + 10, 150);
-                                q = `${aVal} - (${bVal} &times; ${cVal})`;
-                                a = `${aVal - (bVal * cVal)}`;
-                            } else if (op === 3) { // a + (b / c)
-                                const cVal = rand(2, 10);
-                                const ans = rand(3, 10);
-                                const bVal = cVal * ans;
-                                const aVal = rand(10, 50);
-                                q = `${aVal} + (${bVal} &divide; ${cVal})`;
-                                a = `${aVal + ans}`;
-                            } else { // a * (b - c)
-                                const bVal = rand(10, 30);
-                                const cVal = rand(2, bVal - 1);
-                                const aVal = rand(2, 8);
-                                q = `${aVal} &times; (${bVal} - ${cVal})`;
-                                a = `${aVal * (bVal - cVal)}`;
-                            }
-                        }
-                        break;
-
-                    case 3: // Percentages & Fractions
-                        {
-                            const op = rand(1, 4);
-                            if (op === 1) { // 10% of Y
-                                const y = rand(10, 50) * 10;
-                                q = `10% of ${y}`;
-                                a = `${y * 0.1}`;
-                            } else if (op === 2) { // Easy % of Y
-                                const x = [20, 25, 50][rand(0, 2)];
-                                const y = rand(5, 20) * (x === 25 ? 4 : 10);
-                                q = `${x}% of ${y}`;
-                                a = `${y * (x / 100)}`;
-                            } else if (op === 3) { // Harder % of Y
-                                const x = rand(11, 30);
-                                const y = [100, 200, 300, 500][rand(0, 3)];
-                                q = `${x}% of ${y}`;
-                                a = `${y * (x / 100)}`;
-                            } else { // (n/d) * num
-                                const num = rand(3, 12) * 5;
-                                const den = [4, 5, 10][rand(0, 2)];
-                                const n = rand(1, den - 1);
-                                q = `(<sup>${n}</sup>/<sub>${den}</sub>) &times; ${num}`;
-                                a = `${(n / den) * num}`;
-                            }
-                        }
-                        break;
-
-                    case 4: // Basic Algebra
-                        {
-                            const op = rand(1, 4);
-                            const x = rand(2, 10);
-                            if (op === 1) { // ax + b = c
-                                const aVal = rand(2, 5);
-                                const bVal = rand(5, 20);
-                                const cVal = aVal * x + bVal;
-                                q = `${aVal}x + ${bVal} = ${cVal}<br><span class="text-2xl">x = ?</span>`;
-                                a = `${x}`;
-                            } else if (op === 2) { // ax = c
-                                const aVal = rand(2, 10);
-                                const cVal = aVal * x;
-                                q = `${aVal}x = ${cVal}<br><span class="text-2xl">x = ?</span>`;
-                                a = `${x}`;
-                            } else if (op === 3) { // x / a = c
-                                const cVal = rand(2, 10);
-                                const aVal = rand(2, 10);
-                                q = `x &divide; ${aVal} = ${cVal}<br><span class="text-2xl">x = ?</span>`;
-                                a = `${aVal * cVal}`;
-                            } else { // a(x + b) = c
-                                const bVal = rand(2, 8);
-                                const aVal = rand(2, 5);
-                                const cVal = aVal * (x + bVal);
-                                q = `${aVal}(x + ${bVal}) = ${cVal}<br><span class="text-2xl">x = ?</span>`;
-                                a = `${x}`;
-                            }
-                        }
-                        break;
-
-                    case 5: // Sequences & Logic
-                        {
-                            const op = rand(1, 5);
-                            if (op === 1) { // Arithmetic
-                                const start = rand(1, 20);
-                                const diff = rand(2, 15);
-                                const seq = [start, start + diff, start + 2 * diff, start + 3 * diff];
-                                q = `${seq.join(', ')}, ?`;
-                                a = `${start + 4 * diff}`;
-                            } else if (op === 2) { // Geometric
-                                const start = rand(1, 5);
-                                const ratio = rand(2, 5);
-                                const seq = [start, start * ratio, start * ratio ** 2];
-                                q = `${seq.join(', ')}, ?`;
-                                a = `${start * ratio ** 3}`;
-                            } else if (op === 3) { // Squares
-                                const start = rand(2, 8);
-                                const seq = [start ** 2, (start + 1) ** 2, (start + 2) ** 2];
-                                q = `${seq.join(', ')}, ?`;
-                                a = `${(start + 3) ** 2}`;
-                            } else if (op === 4) { // Alternating (+a, -b)
-                                const start = rand(10, 30);
-                                const op1 = rand(3, 10);
-                                const op2 = rand(1, op1 - 1);
-                                const seq = [start, start + op1, start + op1 - op2, start + op1 - op2 + op1];
-                                q = `${seq.join(', ')}, ?`;
-                                a = `${start + op1 - op2 + op1 - op2}`;
-                            } else { // Increasing diff
-                                const start = rand(1, 5);
-                                const d1 = rand(1, 3);
-                                const seq = [start, start + d1, start + d1 + (d1 + 1), start + d1 + (d1 + 1) + (d1 + 2)];
-                                q = `${seq.join(', ')}, ?`;
-                                a = `${start + d1 + (d1 + 1) + (d1 + 2) + (d1 + 3)}`;
-                            }
-                        }
-                        break;
+        /**
+         * Utility: Random Helpers
+         */
+        const Random = {
+            int: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+            from: (arr) => arr[Math.floor(Math.random() * arr.length)],
+            bool: () => Math.random() > 0.5,
+            weighted: (arr, weights) => {
+                let sum = weights.reduce((acc, el) => acc + el, 0);
+                let acc = 0;
+                let chance = Math.random() * sum;
+                for (let i = 0; i < arr.length; i++) {
+                    acc += weights[i];
+                    if (chance <= acc) return arr[i];
                 }
-
-                return { question: q, answer: a };
+                return arr[0];
             }
+        };
 
-            /**
-             * Updates header UI elements based on the current state
-             */
-            function updateHeaderUI() {
-                levelEl.textContent = `Level ${state.level}`;
-                streakEl.textContent = `Streak: ${state.streak}`;
-            }
-
-            /**
-             * Generates the next problem, resets state, and updates UI
-             */
-            function nextProblem() {
-                state.currentProblem = generateProblem(state.level);
-                
-                // Update UI
-                updateHeaderUI();
-                problemEl.innerHTML = state.currentProblem.question;
-                
-                // Reset form
-                answerInput.value = '';
-                feedbackContainer.classList.add('hidden');
-                answerInput.disabled = false;
-                submitBtn.disabled = false;
-                state.isSubmitting = false;
-
-                // Focus input for next problem
-                answerInput.focus();
-            }
-
-            /**
-             * Saves the current state (level and streak) to localStorage
-             */
-            function saveState() {
-                const stateToSave = {
-                    level: state.level,
-                    streak: state.streak,
+        /**
+         * Core Application Logic
+         */
+        class MentalMathApp {
+            constructor() {
+                // State
+                this.state = {
+                    mode: 'MENU', 
+                    level: 1,
+                    streak: 0,
+                    score: 0,
+                    currentProblem: null,
+                    isSubmitting: false,
+                    timer: null,
+                    timeLeft: 0,
+                    binaryLevel7State: 0 // Current value user has clicked in Lvl 7
                 };
-                localStorage.setItem(STATE_KEY, JSON.stringify(stateToSave));
-            }
 
-            /**
-             * Loads state from localStorage
-             */
-            function loadState() {
-                const savedState = localStorage.getItem(STATE_KEY);
-                if (savedState) {
-                    const parsedState = JSON.parse(savedState);
-                    state.level = parsedState.level || 1;
-                    state.streak = parsedState.streak || 0;
-                }
-            }
-            
-            /**
-             * Shows feedback to the user
-             */
-            function showFeedback(isCorrect, correctAnswer) {
-                if (isCorrect) {
-                    feedbackContainer.textContent = 'Correct!';
-                    feedbackContainer.classList.remove('bg-red-900', 'text-red-200');
-                    feedbackContainer.classList.add('bg-green-800', 'text-green-200');
-                } else {
-                    feedbackContainer.textContent = `Incorrect. The answer was ${correctAnswer}`;
-                    feedbackContainer.classList.remove('bg-green-800', 'text-green-200');
-                    feedbackContainer.classList.add('bg-red-900', 'text-red-200');
-                }
-                feedbackContainer.classList.remove('hidden');
-            }
+                // DOM Elements
+                this.el = {
+                    menu: document.getElementById('menu-view'),
+                    practice: document.getElementById('practice-view'),
+                    game: document.getElementById('game-view'),
+                    results: document.getElementById('results-view'),
+                    problemArea: document.getElementById('problem-area'),
+                    feedback: document.getElementById('feedback-bar'),
+                    input: document.getElementById('answer-input'),
+                    infoLeft: document.getElementById('game-info-left'),
+                    infoRight: document.getElementById('game-info-right'),
+                    timerContainer: document.getElementById('timer-container'),
+                    timerBar: document.getElementById('timer-bar'),
+                    finalScore: document.getElementById('final-score'),
+                    exitBtn: document.getElementById('exit-btn'),
+                    form: document.getElementById('answer-form'),
+                    binaryControls: document.getElementById('binary-controls'),
+                    helpModal: document.getElementById('help-modal')
+                };
 
-            /**
-             * Handles the form submission
-             */
-            function handleSubmit(e) {
-                e.preventDefault();
-                if (state.isSubmitting) return;
+                // Bind Events
+                this.el.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                this.el.exitBtn.addEventListener('click', () => this.goHome());
                 
-                state.isSubmitting = true;
-                answerInput.disabled = true;
-                submitBtn.disabled = true;
-
-                const userAnswer = answerInput.value.trim();
-                const correctAnswer = state.currentProblem.answer;
-
-                const isCorrect = userAnswer === correctAnswer;
-
-                if (isCorrect) {
-                    state.streak++;
-                    if (state.streak >= 5) {
-                        state.streak = 0;
-                        state.level++;
-                        if (state.level > 5) {
-                            state.level = 1; // Loop back to level 1
-                        }
+                // Event Delegation for Binary Bit Clicks
+                this.el.problemArea.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.bit-interactive');
+                    if (btn && !this.state.isSubmitting) {
+                        this.toggleBit(btn);
                     }
+                });
+
+                // Load Career State
+                const saved = localStorage.getItem('mm_career');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    this.careerLevel = parsed.level || 1;
+                    this.careerStreak = parsed.streak || 0;
                 } else {
-                    state.streak = 0;
+                    this.careerLevel = 1;
+                    this.careerStreak = 0;
                 }
-
-                showFeedback(isCorrect, correctAnswer);
-                saveState();
-                updateHeaderUI();
-
-                // Load next problem after a delay
-                setTimeout(() => {
-                    nextProblem();
-                }, isCorrect ? 1000 : 2000); // Shorter delay on correct, longer on incorrect
             }
 
-            // --- Initialization ---
-            
-            loadState();
-            nextProblem();
+            // --- Navigation ---
 
-            answerForm.addEventListener('submit', handleSubmit);
-        });
+            switchView(viewName) {
+                this.el.menu.classList.add('hidden');
+                this.el.practice.classList.add('hidden');
+                this.el.game.classList.add('hidden');
+                this.el.results.classList.add('hidden');
+                this.el.exitBtn.classList.add('hidden');
+
+                if (viewName === 'MENU') this.el.menu.classList.remove('hidden');
+                if (viewName === 'PRACTICE') this.el.practice.classList.remove('hidden');
+                if (viewName === 'GAME') {
+                    this.el.game.classList.remove('hidden');
+                    this.el.exitBtn.classList.remove('hidden');
+                    if(this.state.level !== 7) setTimeout(() => this.el.input.focus(), 100);
+                }
+                if (viewName === 'RESULTS') this.el.results.classList.remove('hidden');
+            }
+
+            goHome() {
+                clearInterval(this.state.timer);
+                this.state.mode = 'MENU';
+                this.switchView('MENU');
+            }
+
+            showPracticeMenu() {
+                this.switchView('PRACTICE');
+            }
+
+            // --- Modes ---
+
+            startCareer() {
+                this.state.mode = 'CAREER';
+                this.state.level = this.careerLevel;
+                this.state.streak = this.careerStreak;
+                this.el.timerContainer.classList.add('hidden');
+                this.startRound();
+            }
+
+            startPractice(level) {
+                this.state.mode = 'PRACTICE';
+                this.state.level = level;
+                this.state.streak = 0;
+                this.el.timerContainer.classList.add('hidden');
+                this.startRound();
+            }
+
+            startTimed() {
+                this.state.mode = 'TIMED';
+                this.state.score = 0;
+                this.state.timeLeft = 600; 
+                this.el.timerContainer.classList.remove('hidden');
+                this.startRound();
+                
+                this.state.timer = setInterval(() => {
+                    this.state.timeLeft--;
+                    const pct = (this.state.timeLeft / 600) * 100;
+                    this.el.timerBar.style.width = `${pct}%`;
+                    
+                    if (pct < 20) this.el.timerBar.className = 'h-full bg-red-500 transition-all duration-1000 ease-linear';
+                    else this.el.timerBar.className = 'h-full bg-orange-500 transition-all duration-1000 ease-linear';
+
+                    if (this.state.timeLeft <= 0) {
+                        this.endTimedMode();
+                    }
+                }, 1000);
+            }
+
+            endTimedMode() {
+                clearInterval(this.state.timer);
+                this.el.finalScore.textContent = this.state.score;
+                this.switchView('RESULTS');
+            }
+
+            // --- Binary UI Helpers ---
+
+            toggleHint() {
+                this.el.problemArea.classList.toggle('show-hint');
+            }
+
+            toggleHelp() {
+                this.el.helpModal.classList.toggle('hidden');
+            }
+
+            toggleBit(btnElement) {
+                // For Level 7 "Write Binary"
+                const value = parseInt(btnElement.dataset.power);
+                const isOn = btnElement.classList.contains('bit-on');
+                
+                if (isOn) {
+                    // Turn Off
+                    btnElement.classList.remove('bit-on');
+                    btnElement.classList.add('bit-off');
+                    btnElement.textContent = '0';
+                    this.state.binaryLevel7State -= value;
+                } else {
+                    // Turn On
+                    btnElement.classList.remove('bit-off');
+                    btnElement.classList.add('bit-on');
+                    btnElement.textContent = '1';
+                    this.state.binaryLevel7State += value;
+                }
+                
+                // Update hidden input so validator works
+                // NOTE: Problem Answer for Lvl 7 is stored as Binary String '1010'
+                // But we want to check if the decimal values match? 
+                // Let's standardize: The app checks input.value vs problem.answer.
+                // For Lvl 7, problem.answer is "1010" (string). 
+                // We need to convert current decimal state to binary string and put in input.
+                
+                // Find total bits used to pad correctly
+                const bitsCount = this.el.problemArea.querySelectorAll('.bit-interactive').length;
+                const binaryStr = this.state.binaryLevel7State.toString(2).padStart(bitsCount, '0');
+                
+                this.el.input.value = binaryStr;
+            }
+
+            // --- Game Logic ---
+
+            startRound() {
+                this.switchView('GAME');
+                this.generateNextProblem();
+                this.updateUI();
+                
+                // Reset State
+                this.el.feedback.classList.add('hidden');
+                this.state.isSubmitting = false;
+                this.el.problemArea.classList.remove('show-hint'); // Hide hints by default
+                
+                // UI specifics for Binary vs Normal
+                if (this.state.level === 6 || this.state.level === 7) {
+                    this.el.binaryControls.classList.remove('hidden');
+                } else {
+                    this.el.binaryControls.classList.add('hidden');
+                }
+
+                if (this.state.level === 7) {
+                    this.el.input.classList.add('hidden'); // Hide typing input
+                    this.el.input.value = "0".repeat(this.state.currentProblem.bits || 4); // Default 0000
+                    this.state.binaryLevel7State = 0;
+                    this.el.input.disabled = false;
+                } else {
+                    this.el.input.classList.remove('hidden');
+                    this.el.input.value = '';
+                    this.el.input.disabled = false;
+                }
+            }
+
+            updateUI() {
+                if (this.state.mode === 'TIMED') {
+                    const mins = Math.floor(this.state.timeLeft / 60);
+                    const secs = this.state.timeLeft % 60;
+                    this.el.infoLeft.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+                    this.el.infoRight.textContent = `Score: ${this.state.score}`;
+                } else {
+                    let lvlName = `Level ${this.state.level}`;
+                    if(this.state.level === 6) lvlName = "Lvl 6: Read Binary";
+                    if(this.state.level === 7) lvlName = "Lvl 7: Write Binary";
+
+                    this.el.infoLeft.textContent = this.state.mode === 'PRACTICE' 
+                        ? `Practice ${lvlName.replace('Lvl ','')}` 
+                        : lvlName;
+                    this.el.infoRight.textContent = `Streak: ${this.state.streak}`;
+                }
+            }
+
+            handleSubmit(e) {
+                e.preventDefault();
+                if (this.state.isSubmitting) return;
+
+                const inputVal = this.el.input.value.trim().toLowerCase();
+                const correctVal = this.state.currentProblem.answer.toString().toLowerCase();
+                
+                const isCorrect = inputVal === correctVal;
+
+                this.handleFeedback(isCorrect, this.state.currentProblem.answer);
+            }
+
+            handleFeedback(isCorrect, realAnswer) {
+                this.state.isSubmitting = true;
+                this.el.input.disabled = true;
+
+                this.el.feedback.classList.remove('hidden', 'bg-red-900', 'text-red-200', 'bg-green-900', 'text-green-200');
+                if (isCorrect) {
+                    this.el.feedback.textContent = Random.from(['Correct!', 'Nice!', 'Spot on!', 'Good job!', 'Fast!']);
+                    this.el.feedback.classList.add('bg-green-900', 'text-green-200');
+                } else {
+                    // For binary read mode, answer is decimal. For write mode, answer is binary string.
+                    let displayAns = realAnswer;
+                    if (this.state.level === 7) {
+                        displayAns = parseInt(realAnswer, 2); // Show decimal answer if they failed to build it
+                        this.el.feedback.innerHTML = `Wrong. Target was: <span class="font-mono">${displayAns}</span>`;
+                    } else {
+                        this.el.feedback.innerHTML = `Wrong. Answer: <span class="font-mono font-bold">${realAnswer}</span>`;
+                    }
+                    this.el.feedback.classList.add('bg-red-900', 'text-red-200');
+                }
+                this.el.feedback.classList.remove('hidden');
+
+                if (isCorrect) {
+                    if (this.state.mode === 'TIMED') this.state.score++;
+                    if (this.state.mode === 'CAREER') {
+                        this.state.streak++;
+                        this.careerStreak = this.state.streak;
+                        if (this.state.streak >= 5) {
+                            this.state.streak = 0;
+                            this.state.level++;
+                            this.careerStreak = 0;
+                            this.careerLevel = this.state.level;
+                            if (this.state.level > 7) {
+                                this.state.level = 1;
+                                this.careerLevel = 1;
+                            }
+                        }
+                        localStorage.setItem('mm_career', JSON.stringify({ level: this.careerLevel, streak: this.careerStreak }));
+                    }
+                    if (this.state.mode === 'PRACTICE') this.state.streak++;
+                } else {
+                    if (this.state.mode === 'CAREER') {
+                        this.state.streak = 0;
+                        this.careerStreak = 0;
+                        localStorage.setItem('mm_career', JSON.stringify({ level: this.careerLevel, streak: 0 }));
+                    }
+                    if (this.state.mode === 'PRACTICE') this.state.streak = 0;
+                }
+
+                setTimeout(() => {
+                    this.startRound();
+                }, isCorrect ? 800 : 2500);
+            }
+
+            // --- Generator Engine ---
+
+            generateNextProblem() {
+                let lvl = this.state.level;
+                let difficulty = 'normal';
+
+                if (this.state.mode === 'TIMED') {
+                    // Include Level 7 in Timed mode? Maybe keep it simple with 1-6 for now or occasional 7
+                    lvl = Random.weighted([1, 2, 3, 4, 5, 6, 7], [25, 20, 15, 10, 10, 10, 10]);
+                    difficulty = 'random'; 
+                } else if (this.state.mode === 'CAREER') {
+                    difficulty = this.state.streak > 2 ? 'hard' : 'normal';
+                }
+
+                const p = this.getProblemByLevel(lvl, difficulty);
+                this.state.currentProblem = p;
+                this.el.problemArea.innerHTML = p.html;
+            }
+
+            getProblemByLevel(level, difficulty) {
+                const r = (min, max) => Random.int(min, max);
+                
+                switch(level) {
+                    case 1: // Arithmetic
+                        {
+                            const type = Random.from(['+', '-', '*', '/']);
+                            if(type === '+') {
+                                if (difficulty === 'hard' && Random.bool()) {
+                                    const a = r(5, 50), b = r(5, 50), c = r(5, 50);
+                                    return { html: `<span class="text-5xl font-mono">${a} + ${b} + ${c}</span>`, answer: a+b+c };
+                                }
+                                const a = r(15, 150), b = r(15, 150);
+                                return { html: `<span class="text-5xl font-mono">${a} + ${b}</span>`, answer: a+b };
+                            }
+                            if(type === '-') {
+                                const a = r(30, 200), b = r(10, a - 5);
+                                return { html: `<span class="text-5xl font-mono">${a} - ${b}</span>`, answer: a-b };
+                            }
+                            if(type === '*') {
+                                const a = r(3, 15), b = r(3, 15);
+                                return { html: `<span class="text-5xl font-mono">${a} &times; ${b}</span>`, answer: a*b };
+                            }
+                            if(type === '/') {
+                                const ans = r(3, 15), b = r(3, 15);
+                                return { html: `<span class="text-5xl font-mono">${ans*b} &div; ${b}</span>`, answer: ans };
+                            }
+                        }
+                        break;
+                    
+                    case 2: // Complex Arithmetic
+                        {
+                            const type = Random.int(1, 5);
+                            if (type === 1) { // Squares
+                                const base = r(5, 15);
+                                const sub = r(5, 30);
+                                return { html: `<span class="text-5xl font-mono">${base}² - ${sub}</span>`, answer: (base*base)-sub };
+                            }
+                            if (type === 2) { // (a+b)*c
+                                const a = r(2, 10), b = r(2, 10), c = r(2, 6);
+                                return { html: `<span class="text-4xl font-mono">(${a} + ${b}) &times; ${c}</span>`, answer: (a+b)*c };
+                            }
+                            // Fallback
+                            const a = r(50, 200), b = r(50, 200);
+                            return { html: `<span class="text-4xl font-mono">${a} + ${b}</span>`, answer: a+b };
+                        }
+                        break;
+
+                    case 3: // Fractions/%
+                        {
+                            const type = Random.int(1, 2);
+                            if (type === 1) { // Percentages
+                                const pcts = difficulty === 'hard' ? [5, 15, 30, 75] : [10, 20, 25, 50];
+                                const p = Random.from(pcts);
+                                const safeBase = r(1, 10) * 20; 
+                                return { html: `<span class="text-4xl font-mono">${p}% of ${safeBase}</span>`, answer: (p/100)*safeBase };
+                            }
+                            // Fractions
+                            const den = Random.from([2, 3, 4, 5, 8, 10]);
+                            const num = r(1, den-1);
+                            const mult = r(2, 12) * den;
+                            return { html: `<span class="text-4xl font-mono"><sup>${num}</sup>&frasl;<sub>${den}</sub> of ${mult}</span>`, answer: (num/den)*mult };
+                        }
+                        break;
+
+                    case 4: // Algebra
+                        {
+                            const v = Random.from(['x', 'y', 'a']);
+                            const type = Random.int(1, 2);
+                            if (type === 1) { // ax - b = c
+                                const x = r(2, 12);
+                                const a = r(2, 9);
+                                const b = r(1, 20);
+                                const c = a*x - b;
+                                return { html: `<div class="text-3xl">${a}${v} - ${b} = ${c}</div><div class="mt-2 text-indigo-400">${v} = ?</div>`, answer: x };
+                            }
+                             const x = r(2, 9);
+                             return { html: `<div class="text-3xl">${v}² = ${x*x}</div><div class="mt-2 text-indigo-400">${v} = ?</div>`, answer: x };
+                        }
+                        break;
+
+                    case 5: // Logic
+                        {
+                            const start = r(1, 50);
+                            const step = r(2, 12);
+                            return { 
+                                html: `<span class="text-3xl tracking-widest font-mono">${start}, ${start+step}, ${start+step*2}, ${start+step*3}, ?</span>`, 
+                                answer: start+step*4 
+                            };
+                        }
+                        break;
+
+                    case 6: // READ BINARY (Binary -> Decimal)
+                        {
+                            // "Expert Mode": Only show bits. Hints hidden by default.
+                            const bits = Random.weighted([4, 5, 6, 8], [40, 30, 20, 10]);
+                            const maxVal = Math.pow(2, bits) - 1;
+                            const value = r(1, maxVal);
+                            const binaryString = value.toString(2).padStart(bits, '0');
+                            
+                            let visualBits = '<div class="flex justify-center gap-2 md:gap-3 flex-wrap">';
+                            binaryString.split('').forEach((bit, index) => {
+                                const power = Math.pow(2, bits - 1 - index);
+                                const isOn = bit === '1';
+                                const styleClass = isOn ? 'bit-on' : 'bit-off';
+                                visualBits += `
+                                    <div class="flex flex-col items-center">
+                                        <div class="w-10 h-14 md:w-12 md:h-16 rounded-lg border-2 flex items-center justify-center font-mono text-xl md:text-2xl font-bold mb-1 bit-switch ${styleClass}">
+                                            ${bit}
+                                        </div>
+                                        <span class="text-xs text-indigo-400 font-mono hint-text">${power}</span>
+                                    </div>
+                                `;
+                            });
+                            visualBits += '</div>';
+
+                            return { 
+                                html: `<div><div class="text-sm text-gray-400 mb-4">What number is this?</div>${visualBits}</div>`, 
+                                answer: value 
+                            };
+                        }
+                        break;
+
+                    case 7: // WRITE BINARY (Decimal -> Binary)
+                        {
+                            const bits = Random.weighted([4, 5, 6], [50, 30, 20]);
+                            const maxVal = Math.pow(2, bits) - 1;
+                            const targetValue = r(1, maxVal);
+                            const correctBinary = targetValue.toString(2).padStart(bits, '0');
+                            
+                            let visualBits = '<div class="flex justify-center gap-2 md:gap-3 flex-wrap">';
+                            for(let i=0; i<bits; i++) {
+                                const power = Math.pow(2, bits - 1 - i);
+                                // All start OFF
+                                visualBits += `
+                                    <div class="flex flex-col items-center">
+                                        <div data-power="${power}" class="w-10 h-14 md:w-12 md:h-16 rounded-lg border-2 flex items-center justify-center font-mono text-xl md:text-2xl font-bold mb-1 bit-switch bit-off bit-interactive transition-transform hover:scale-105">
+                                            0
+                                        </div>
+                                        <span class="text-xs text-indigo-400 font-mono hint-text">${power}</span>
+                                    </div>
+                                `;
+                            }
+                            visualBits += '</div>';
+
+                            return {
+                                html: `<div>
+                                    <div class="text-sm text-gray-400 mb-2">Make this number:</div>
+                                    <div class="text-5xl font-mono font-bold text-indigo-400 mb-6">${targetValue}</div>
+                                    ${visualBits}
+                                </div>`,
+                                answer: correctBinary, // Expected input value
+                                bits: bits
+                            };
+                        }
+                        break;
+                }
+                return { html: 'Error', answer: 0 };
+            }
+        }
+
+        const app = new MentalMathApp();
+        window.app = app;
+
     </script>
 </body>
 </html>
-
-
