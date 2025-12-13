@@ -104,12 +104,23 @@
         <div class="text-xl font-bold tracking-tight text-indigo-400 cursor-pointer hover:text-indigo-300 transition" onclick="location.reload()">
             🧠 MentalMath<span class="text-white">Master</span>
         </div>
-        <button id="exit-btn" class="hidden text-sm font-medium text-gray-400 hover:text-white transition flex items-center gap-2">
-            <span>Exit</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-        </button>
+        
+        <div class="flex items-center gap-4">
+            <!-- Fullscreen Toggle -->
+            <button id="fullscreen-btn" class="text-gray-400 hover:text-white transition p-1 hover:bg-gray-700 rounded" title="Toggle Fullscreen">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l-5 5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+            </button>
+
+            <!-- Exit Button -->
+            <button id="exit-btn" class="hidden text-sm font-medium text-gray-400 hover:text-white transition flex items-center gap-2">
+                <span>Exit</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+            </button>
+        </div>
     </nav>
 
     <main class="flex-grow flex items-center justify-center p-4 w-full max-w-2xl mx-auto relative">
@@ -750,6 +761,17 @@
 
         const app = new MentalMathApp();
         window.app = app;
+
+        // Fullscreen Toggle Logic
+        document.getElementById('fullscreen-btn').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
 
     </script>
 </body>
