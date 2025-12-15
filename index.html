@@ -408,13 +408,13 @@
             startTimed() {
                 this.state.mode = 'TIMED';
                 this.state.score = 0;
-                this.state.timeLeft = 600; 
+                this.state.timeLeft = 300; 
                 this.el.timerContainer.classList.remove('hidden');
                 this.startRound();
                 
                 this.state.timer = setInterval(() => {
                     this.state.timeLeft--;
-                    const pct = (this.state.timeLeft / 600) * 100;
+                    const pct = (this.state.timeLeft / 300) * 100;
                     this.el.timerBar.style.width = `${pct}%`;
                     
                     if (pct < 20) this.el.timerBar.className = 'h-full bg-red-500 transition-all duration-1000 ease-linear';
