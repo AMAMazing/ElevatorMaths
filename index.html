@@ -2,284 +2,282 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mental Math Trainer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mental Math Master</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Fira+Code:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Fira+Code:wght@500;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none;
         }
-        .font-mono {
-            font-family: 'Fira Code', monospace;
-        }
-        /* Transitions */
-        .fade-enter-active {
-            animation: fadeIn 0.3s ease-out;
-        }
+        .font-mono { font-family: 'Fira Code', monospace; }
+
+        /* Animations */
+        .fade-enter-active { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
-        /* Bit Switch Toggle Animation */
+
+        /* Multiplier Pulse */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px currentColor; }
+            50% { box-shadow: 0 0 25px currentColor; }
+        }
+        .multiplier-pulse { animation: pulse-glow 2s infinite; }
+
+        /* Chaos Glitch Effect */
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+        .chaos-text { animation: glitch 0.3s infinite linear; animation-play-state: paused; }
+        .chaos-active .chaos-text { animation-play-state: running; }
+
+        /* Binary Switches */
         .bit-switch {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
+            user-select: none;
         }
-        .bit-switch::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .bit-switch:hover::after {
-            opacity: 1;
-        }
-        
         .bit-on {
-            background-color: #4ade80; /* green-400 */
-            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4), inset 0 2px 0 rgba(255,255,255,0.3);
-            border-color: #22c55e;
-            color: #064e3b;
-            transform: translateY(1px);
+            background-color: #4ade80; 
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+            border-color: #22c55e; color: #064e3b; transform: translateY(1px);
         }
         .bit-off {
-            background-color: #1f2937; /* gray-800 */
-            border-color: #374151;
-            color: #4b5563;
-            box-shadow: 0 4px 0 #111827; /* Raised 3D effect */
-            transform: translateY(-2px);
+            background-color: #1f2937; border-color: #374151; color: #4b5563;
+            box-shadow: 0 4px 0 #111827; transform: translateY(-2px);
         }
-        .bit-off:active {
-            transform: translateY(1px);
-            box-shadow: 0 0 0 #111827;
-        }
-        
-        /* Interactive bits for Level 7 */
-        .bit-interactive {
-            cursor: pointer;
-        }
-        .bit-interactive:hover {
-            border-color: #6366f1; /* indigo-500 */
-        }
+        .bit-off:active { transform: translateY(1px); box-shadow: 0 0 0 #111827; }
 
-        /* Helper numbers visibility */
-        .hint-text {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .show-hint .hint-text {
-            opacity: 1;
-        }
-
-        /* Feedback Animation */
-        #feedback-bar {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-origin: top;
-        }
-        #feedback-bar.hidden {
-            transform: scaleY(0);
-            opacity: 0;
-            height: 0;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* Modal Backdrop */
-        #modal-backdrop {
-            background-color: rgba(0, 0, 0, 0.7);
+        /* UI Utilities */
+        .hint-overlay {
+            background: rgba(31, 41, 55, 0.95);
             backdrop-filter: blur(4px);
         }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #1f2937; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+<body class="bg-gray-900 text-white min-h-screen flex flex-col overflow-hidden">
 
     <!-- Navbar -->
-    <nav class="w-full p-4 flex justify-between items-center bg-gray-800 shadow-md z-10 border-b border-gray-700">
-        <div class="text-xl font-bold tracking-tight text-indigo-400 cursor-pointer hover:text-indigo-300 transition" onclick="location.reload()">
-            🧠 MentalMath<span class="text-white">Master</span>
+    <nav class="w-full p-4 flex justify-between items-center bg-gray-800 shadow-md z-20 border-b border-gray-700">
+        <div class="flex items-center gap-3">
+            <div class="text-xl font-bold tracking-tight text-indigo-400 cursor-pointer" onclick="location.reload()">
+                🧠 MentalMath<span class="text-white">Master</span>
+            </div>
         </div>
         
-        <div class="flex items-center gap-4">
-            <!-- Fullscreen Toggle (Icon from Heroicons) -->
-            <button id="fullscreen-btn" class="text-gray-400 hover:text-white transition p-2 hover:bg-gray-700 rounded-lg" title="Toggle Fullscreen">
+        <div class="flex items-center gap-3">
+            <button onclick="app.toggleHistory()" class="p-2 text-gray-400 hover:text-white transition rounded-lg hover:bg-gray-700" title="History">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
+            <button id="fullscreen-btn" class="p-2 text-gray-400 hover:text-white transition rounded-lg hover:bg-gray-700" title="Fullscreen">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
                 </svg>
             </button>
-
-            <!-- Exit Button -->
-            <button id="exit-btn" class="hidden text-sm font-medium text-gray-400 hover:text-white transition flex items-center gap-2">
-                <span>Exit</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
+            <button id="exit-btn" class="hidden text-sm font-medium text-gray-400 hover:text-white transition flex items-center gap-1 pl-2 border-l border-gray-600">
+                Exit
             </button>
         </div>
     </nav>
 
-    <main class="flex-grow flex items-center justify-center p-4 w-full max-w-2xl mx-auto relative">
+    <main class="flex-grow flex items-center justify-center p-4 w-full max-w-2xl mx-auto relative z-10">
         
         <!-- VIEW: MENU -->
         <div id="menu-view" class="w-full space-y-8 text-center fade-enter-active">
-            <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 mb-2">
-                Train Your Brain
-            </h1>
-            <p class="text-gray-400 text-lg mb-8">Select a training mode</p>
+            <div>
+                <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 mb-2">
+                    Train Your Brain
+                </h1>
+                <div id="menu-pb" class="text-sm font-mono text-emerald-400 bg-emerald-900/30 inline-block px-3 py-1 rounded-full border border-emerald-500/30">
+                    PB: 0
+                </div>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Card: Career -->
+                <!-- Career -->
                 <button onclick="app.startCareer()" class="group relative bg-gray-800 hover:bg-indigo-900/40 border border-gray-700 hover:border-indigo-500 rounded-xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl flex flex-col items-center">
                     <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">🏆</div>
                     <h3 class="text-xl font-bold text-white mb-2">Career</h3>
-                    <p class="text-sm text-gray-400">Progress through levels. Build your streak.</p>
+                    <p class="text-xs text-gray-400">Streak building.</p>
                 </button>
 
-                <!-- Card: Practice -->
+                <!-- Practice -->
                 <button onclick="app.showPracticeMenu()" class="group relative bg-gray-800 hover:bg-emerald-900/40 border border-gray-700 hover:border-emerald-500 rounded-xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl flex flex-col items-center">
                     <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">🎯</div>
                     <h3 class="text-xl font-bold text-white mb-2">Practice</h3>
-                    <p class="text-sm text-gray-400">Choose specific skills. No pressure.</p>
+                    <p class="text-xs text-gray-400">Target specific skills.</p>
                 </button>
 
-                <!-- Card: Timed -->
+                <!-- Timed Run -->
                 <button onclick="app.startTimed()" class="group relative bg-gray-800 hover:bg-orange-900/40 border border-gray-700 hover:border-orange-500 rounded-xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl flex flex-col items-center">
-                    <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">⏱️</div>
-                    <h3 class="text-xl font-bold text-white mb-2">Timed Run</h3>
-                    <p class="text-sm text-gray-400">10 minutes. Infinite chaos. High score.</p>
+                    <div class="absolute top-3 right-3 text-xs bg-orange-500 text-black font-bold px-2 py-0.5 rounded">5 MIN</div>
+                    <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">⚡</div>
+                    <h3 class="text-xl font-bold text-white mb-2">High Stakes</h3>
+                    <p class="text-xs text-gray-400">Multipliers. All Modes.</p>
                 </button>
             </div>
         </div>
 
         <!-- VIEW: PRACTICE SELECTOR -->
         <div id="practice-view" class="hidden w-full text-center fade-enter-active">
-            <h2 class="text-3xl font-bold mb-6">Select Level</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="app.startPractice(1)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 1: Arithmetic</button>
-                <button onclick="app.startPractice(2)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 2: Advanced</button>
-                <button onclick="app.startPractice(3)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 3: Fractions/%</button>
-                <button onclick="app.startPractice(4)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 4: Algebra</button>
-                <button onclick="app.startPractice(5)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 hover:border-indigo-500 transition">Lvl 5: Logic/Seq</button>
+            <h2 class="text-2xl font-bold mb-4 text-gray-300">Select Module</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 h-[60vh] overflow-y-auto custom-scroll pr-1">
+                <button onclick="app.startPractice(1)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 text-sm">Arithmetic</button>
+                <button onclick="app.startPractice(2)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 text-sm">Complex Ops</button>
+                <button onclick="app.startPractice(3)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 text-sm">Fractions / %</button>
+                <button onclick="app.startPractice(4)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 text-sm">Algebra</button>
+                <button onclick="app.startPractice(5)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 text-sm">Sequences</button>
+                <button onclick="app.startPractice(8)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 text-sm">Modulo (%)</button>
+                <button onclick="app.startPractice(9)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 text-sm">Is it Prime?</button>
+                <button onclick="app.startPractice(10)" class="p-4 bg-gray-800 rounded-lg hover:bg-purple-900/30 border border-purple-500/30 text-purple-300 text-sm">Chaos Mode</button>
                 
-                <div class="col-span-2 grid grid-cols-2 gap-4 mt-2">
-                     <button onclick="app.startPractice(6)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 border-indigo-500/30 hover:border-indigo-500 text-indigo-300 transition">
-                         Lvl 6: Read Binary
-                         <span class="block text-xs text-gray-500 mt-1">1010 → 10</span>
-                     </button>
-                     <button onclick="app.startPractice(7)" class="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 border border-gray-700 border-indigo-500/30 hover:border-indigo-500 text-indigo-300 transition">
-                         Lvl 7: Write Binary
-                         <span class="block text-xs text-gray-500 mt-1">10 → 1010</span>
-                     </button>
+                <div class="col-span-2 md:col-span-1 grid grid-cols-1 gap-2">
+                     <button onclick="app.startPractice(6)" class="p-2 bg-gray-800 rounded-lg border border-indigo-500/30 text-indigo-300 text-xs">Read Binary</button>
+                     <button onclick="app.startPractice(7)" class="p-2 bg-gray-800 rounded-lg border border-indigo-500/30 text-indigo-300 text-xs">Write Binary</button>
                 </div>
             </div>
-            <button onclick="app.goHome()" class="mt-8 text-gray-500 hover:text-white transition">Back to Menu</button>
+            <button onclick="app.goHome()" class="mt-6 text-gray-500 hover:text-white transition">Back to Menu</button>
         </div>
 
         <!-- VIEW: GAME -->
         <div id="game-view" class="hidden w-full max-w-md fade-enter-active">
-            <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 min-h-[400px] flex flex-col justify-between relative overflow-hidden border border-gray-700">
+            <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 min-h-[420px] flex flex-col justify-between relative overflow-hidden border border-gray-700">
                 
                 <!-- Game Header -->
-                <header class="flex justify-between items-center mb-6 text-sm font-bold uppercase tracking-wider relative z-10">
-                    <span id="game-info-left" class="text-indigo-400">Level 1</span>
-                    <span id="game-info-right" class="text-green-400">Streak: 0</span>
+                <header class="flex justify-between items-center mb-6 h-8 relative z-10">
+                    <div class="flex items-center gap-2">
+                        <span id="game-info-left" class="text-sm font-bold uppercase tracking-wider text-gray-400">Level 1</span>
+                        <div id="multiplier-badge" class="hidden px-2 py-0.5 rounded-full font-black italic bg-gray-700 text-gray-400 text-xs transition-all duration-300">1x</div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span id="game-info-right" class="text-sm font-bold text-gray-400">0</span>
+                        <button onclick="app.showHint()" class="w-6 h-6 rounded-full bg-gray-700 hover:bg-indigo-600 text-white text-xs font-bold flex items-center justify-center transition" title="Show Hint">?</button>
+                    </div>
                 </header>
 
                 <!-- Timer Bar -->
-                <div id="timer-container" class="hidden absolute top-0 left-0 w-full h-1 bg-gray-700 z-0">
-                    <div id="timer-bar" class="h-full bg-orange-500 transition-all duration-1000 ease-linear" style="width: 100%"></div>
-                </div>
-                
-                <!-- Binary Controls (Only Level 6/7) -->
-                <div id="binary-controls" class="hidden flex justify-end gap-2 mb-2">
-                    <button onclick="app.toggleHint()" id="hint-btn" class="text-xs px-2 py-1 rounded bg-gray-700 text-indigo-300 hover:bg-gray-600 transition">
-                        💡 Hint
-                    </button>
-                    <button onclick="app.toggleHelp()" class="text-xs px-2 py-1 rounded bg-gray-700 text-indigo-300 hover:bg-gray-600 transition">
-                        ❓ Help
-                    </button>
+                <div id="timer-container" class="hidden absolute top-0 left-0 w-full h-1.5 bg-gray-700 z-0">
+                    <div id="timer-bar" class="h-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)] transition-all duration-1000 ease-linear" style="width: 100%"></div>
                 </div>
 
-                <!-- Problem Container -->
-                <div class="flex-grow flex flex-col items-center justify-center py-4">
+                <!-- Problem Area -->
+                <div class="flex-grow flex flex-col items-center justify-center py-2 relative">
                     <div id="problem-area" class="text-center w-full transition-all duration-200">
                         <!-- Content Injected via JS -->
+                    </div>
+                    
+                    <!-- Hint Overlay -->
+                    <div id="hint-box" class="hidden absolute inset-0 hint-overlay rounded-lg flex items-center justify-center p-4 text-center z-20 flex-col">
+                        <div class="text-indigo-400 font-bold mb-2">HINT</div>
+                        <p id="hint-text" class="text-sm text-gray-300"></p>
+                        <button onclick="app.hideHint()" class="mt-4 text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">Close</button>
                     </div>
                 </div>
 
                 <!-- Feedback Area -->
-                <div id="feedback-bar" class="hidden text-center text-lg font-bold p-3 rounded-lg mb-4"></div>
+                <div id="feedback-bar" class="hidden text-center text-sm font-bold p-2 rounded mb-2"></div>
 
-                <!-- Input Area -->
-                <form id="answer-form" class="mt-2" autocomplete="off">
-                    <input type="text" id="answer-input" inputmode="numeric" pattern="[0-9.-]*"
-                           class="w-full text-center text-4xl font-bold p-4 rounded-xl bg-gray-900 text-white border-2 border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none transition duration-200 placeholder-gray-700 font-mono"
-                           placeholder="?" required>
+                <!-- Controls Container -->
+                <div id="controls-area" class="mt-2">
                     
-                    <button type="submit" id="submit-btn"
-                            class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-lg transition duration-200 mt-4 active:scale-[0.98]">
-                        Submit
+                    <!-- 1. Text Input (Standard) -->
+                    <form id="answer-form" class="w-full" autocomplete="off">
+                        <input type="text" id="answer-input" inputmode="numeric" pattern="[0-9.-]*"
+                               class="w-full text-center text-4xl font-bold p-4 rounded-xl bg-gray-900 text-white border-2 border-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none transition duration-200 placeholder-gray-800 font-mono"
+                               placeholder="?" required>
+                        <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-lg transition duration-200 mt-4 active:scale-[0.98]">
+                            Submit
+                        </button>
+                    </form>
+
+                    <!-- 2. Boolean Inputs (Is Prime) -->
+                    <div id="bool-controls" class="hidden grid grid-cols-2 gap-4">
+                        <button onclick="app.submitBoolean(true)" class="bg-green-700 hover:bg-green-600 border-b-4 border-green-900 hover:border-green-800 text-white font-bold py-6 rounded-xl text-xl transition active:translate-y-1 active:border-b-0">
+                            YES
+                        </button>
+                        <button onclick="app.submitBoolean(false)" class="bg-red-700 hover:bg-red-600 border-b-4 border-red-900 hover:border-red-800 text-white font-bold py-6 rounded-xl text-xl transition active:translate-y-1 active:border-b-0">
+                            NO
+                        </button>
+                    </div>
+
+                    <!-- 3. Binary Submit (Write Binary) -->
+                    <button id="binary-submit-btn" onclick="app.submitBinary()" class="hidden w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-lg transition duration-200 active:scale-[0.98]">
+                        Confirm Pattern
                     </button>
-                </form>
+                </div>
             </div>
         </div>
 
-        <!-- VIEW: RESULTS (Timed Mode) -->
+        <!-- VIEW: RESULTS -->
         <div id="results-view" class="hidden w-full text-center max-w-md fade-enter-active">
-            <div class="bg-gray-800 rounded-2xl p-8 shadow-2xl border border-gray-700">
-                <h2 class="text-3xl font-bold text-white mb-2">Time's Up!</h2>
-                <div class="text-6xl font-black text-indigo-400 mb-6" id="final-score">0</div>
-                <p class="text-gray-400 mb-8">Problems Solved</p>
-                <button onclick="app.goHome()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition">Main Menu</button>
+            <div class="bg-gray-800 rounded-2xl p-8 shadow-2xl border border-gray-700 relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none"></div>
+                
+                <h2 class="text-3xl font-bold text-white mb-2 relative z-10">Time's Up!</h2>
+                
+                <div class="my-8 relative z-10">
+                    <div class="text-gray-400 text-sm uppercase tracking-wide mb-1">Final Score</div>
+                    <div class="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400" id="final-score">0</div>
+                    <div id="new-pb-badge" class="hidden mt-2 inline-block bg-yellow-500/20 text-yellow-300 border border-yellow-500/50 px-3 py-1 rounded-full text-xs font-bold">
+                        🎉 NEW PERSONAL BEST
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-8 relative z-10">
+                    <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+                        <div class="text-xs text-gray-500">Problems</div>
+                        <div class="text-xl font-bold text-white" id="result-count">0</div>
+                    </div>
+                    <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+                        <div class="text-xs text-gray-500">Best Streak</div>
+                        <div class="text-xl font-bold text-white" id="result-streak">0</div>
+                    </div>
+                </div>
+
+                <button onclick="app.startTimed()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition mb-3 shadow-lg shadow-indigo-500/20">Try Again</button>
+                <button onclick="app.goHome()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 rounded-lg transition">Main Menu</button>
             </div>
         </div>
 
     </main>
     
-    <!-- MODAL: Binary Help -->
-    <div id="help-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div id="modal-backdrop" class="absolute inset-0" onclick="app.toggleHelp()"></div>
-        <div class="bg-gray-800 rounded-xl p-6 md:p-8 max-w-sm w-full relative z-10 shadow-2xl border border-gray-700">
-            <h3 class="text-2xl font-bold text-white mb-4">How Binary Works</h3>
-            <p class="text-gray-300 mb-4 leading-relaxed">
-                Computers count using switches that are either <strong>ON (1)</strong> or <strong>OFF (0)</strong>.
-            </p>
-            <p class="text-gray-300 mb-4 leading-relaxed">
-                Each switch doubles in value from right to left:
-            </p>
-            <div class="flex justify-center gap-2 mb-6 font-mono text-sm">
-                <div class="text-center"><div class="p-2 bg-gray-700 rounded mb-1">8</div></div>
-                <div class="text-center"><div class="p-2 bg-gray-700 rounded mb-1">4</div></div>
-                <div class="text-center"><div class="p-2 bg-gray-700 rounded mb-1">2</div></div>
-                <div class="text-center"><div class="p-2 bg-gray-700 rounded mb-1">1</div></div>
+    <!-- MODAL: History -->
+    <div id="history-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-filter blur-sm" onclick="app.toggleHistory()"></div>
+        <div class="bg-gray-800 rounded-xl p-6 max-w-sm w-full relative z-10 shadow-2xl border border-gray-700 flex flex-col max-h-[80vh]">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center justify-between">
+                Last 10 Runs
+                <button onclick="app.toggleHistory()" class="text-gray-500 hover:text-white">&times;</button>
+            </h3>
+            <div id="history-list" class="flex-grow overflow-y-auto custom-scroll space-y-2 pr-1">
+                <!-- Injected via JS -->
             </div>
-            <p class="text-gray-300 mb-6 text-sm">
-                To read a number, add up the values of the switches that are ON. 
-                <br><span class="text-indigo-400 mt-1 block">Example: 8 + 1 = 9</span>
-            </p>
-            <button onclick="app.toggleHelp()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition">Got it!</button>
         </div>
     </div>
 
     <script>
-        // PWA Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW registered:', reg.scope))
-                    .catch(err => console.log('SW registration failed:', err));
-            });
-        }
+        // --- DATA & CONFIG ---
+        
+        const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151];
 
-        /**
-         * Utility: Random Helpers
-         */
         const Random = {
             int: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
             from: (arr) => arr[Math.floor(Math.random() * arr.length)],
@@ -296,493 +294,563 @@
             }
         };
 
-        /**
-         * Core Application Logic
-         */
+        // --- CORE APP ---
+
         class MentalMathApp {
             constructor() {
-                // State
+                // Persistent Data
+                this.history = JSON.parse(localStorage.getItem('mm_history')) || [];
+                this.pb = parseInt(localStorage.getItem('mm_pb')) || 0;
+                this.career = JSON.parse(localStorage.getItem('mm_career')) || { level: 1, streak: 0 };
+
+                // Runtime State
                 this.state = {
                     mode: 'MENU', 
                     level: 1,
-                    streak: 0,
                     score: 0,
-                    currentProblem: null,
-                    isSubmitting: false,
-                    timer: null,
+                    rawSolved: 0,
+                    streak: 0,
+                    maxStreak: 0,
+                    multiplier: 1,
                     timeLeft: 0,
-                    binaryLevel7State: 0 // Current value user has clicked in Lvl 7
+                    problem: null, // { html, answer, type, hint, id }
+                    isSubmitting: false,
+                    binaryValue: 0,
+                    recentProblems: []
                 };
+
+                this.timerInterval = null;
 
                 // DOM Elements
                 this.el = {
-                    menu: document.getElementById('menu-view'),
-                    practice: document.getElementById('practice-view'),
-                    game: document.getElementById('game-view'),
-                    results: document.getElementById('results-view'),
-                    problemArea: document.getElementById('problem-area'),
-                    feedback: document.getElementById('feedback-bar'),
-                    input: document.getElementById('answer-input'),
-                    infoLeft: document.getElementById('game-info-left'),
-                    infoRight: document.getElementById('game-info-right'),
-                    timerContainer: document.getElementById('timer-container'),
-                    timerBar: document.getElementById('timer-bar'),
-                    finalScore: document.getElementById('final-score'),
-                    exitBtn: document.getElementById('exit-btn'),
-                    form: document.getElementById('answer-form'),
-                    binaryControls: document.getElementById('binary-controls'),
-                    helpModal: document.getElementById('help-modal')
+                    views: {
+                        menu: document.getElementById('menu-view'),
+                        practice: document.getElementById('practice-view'),
+                        game: document.getElementById('game-view'),
+                        results: document.getElementById('results-view')
+                    },
+                    game: {
+                        area: document.getElementById('problem-area'),
+                        input: document.getElementById('answer-input'),
+                        form: document.getElementById('answer-form'),
+                        infoLeft: document.getElementById('game-info-left'),
+                        infoRight: document.getElementById('game-info-right'),
+                        feedback: document.getElementById('feedback-bar'),
+                        timerBar: document.getElementById('timer-bar'),
+                        timerCont: document.getElementById('timer-container'),
+                        multiplier: document.getElementById('multiplier-badge'),
+                        boolControls: document.getElementById('bool-controls'),
+                        binSubmit: document.getElementById('binary-submit-btn'),
+                        hintBox: document.getElementById('hint-box'),
+                        hintText: document.getElementById('hint-text')
+                    },
+                    results: {
+                        score: document.getElementById('final-score'),
+                        count: document.getElementById('result-count'),
+                        streak: document.getElementById('result-streak'),
+                        badge: document.getElementById('new-pb-badge')
+                    },
+                    modals: {
+                        history: document.getElementById('history-modal')
+                    }
                 };
 
-                // Bind Events
-                this.el.form.addEventListener('submit', (e) => this.handleSubmit(e));
-                this.el.exitBtn.addEventListener('click', () => this.goHome());
-                
-                // Event Delegation for Binary Bit Clicks
-                this.el.problemArea.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.bit-interactive');
-                    if (btn && !this.state.isSubmitting) {
-                        this.toggleBit(btn);
-                    }
-                });
+                // Initialization
+                this.updateMenuPB();
+                this.bindEvents();
+            }
 
-                // Load Career State
-                const saved = localStorage.getItem('mm_career');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    this.careerLevel = parsed.level || 1;
-                    this.careerStreak = parsed.streak || 0;
-                } else {
-                    this.careerLevel = 1;
-                    this.careerStreak = 0;
+            bindEvents() {
+                this.el.game.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                document.getElementById('exit-btn').addEventListener('click', () => this.goHome());
+
+                // Interactive bits (Event Delegation for Binary Write)
+                this.el.game.area.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.bit-interactive');
+                    if (btn && !this.state.isSubmitting) this.toggleBit(btn);
+                });
+            }
+
+            // --- VIEW MANAGEMENT ---
+
+            switchView(name) {
+                Object.values(this.el.views).forEach(el => el.classList.add('hidden'));
+                document.getElementById('exit-btn').classList.add('hidden');
+                
+                if (name === 'GAME') {
+                    this.el.views.game.classList.remove('hidden');
+                    document.getElementById('exit-btn').classList.remove('hidden');
+                } else if (name === 'MENU') {
+                    this.el.views.menu.classList.remove('hidden');
+                } else if (name === 'PRACTICE') {
+                    this.el.views.practice.classList.remove('hidden');
+                } else if (name === 'RESULTS') {
+                    this.el.views.results.classList.remove('hidden');
                 }
             }
 
-            // --- Navigation ---
-
-            switchView(viewName) {
-                this.el.menu.classList.add('hidden');
-                this.el.practice.classList.add('hidden');
-                this.el.game.classList.add('hidden');
-                this.el.results.classList.add('hidden');
-                this.el.exitBtn.classList.add('hidden');
-
-                if (viewName === 'MENU') this.el.menu.classList.remove('hidden');
-                if (viewName === 'PRACTICE') this.el.practice.classList.remove('hidden');
-                if (viewName === 'GAME') {
-                    this.el.game.classList.remove('hidden');
-                    this.el.exitBtn.classList.remove('hidden');
-                    if(this.state.level !== 7) setTimeout(() => this.el.input.focus(), 100);
-                }
-                if (viewName === 'RESULTS') this.el.results.classList.remove('hidden');
+            updateMenuPB() {
+                document.getElementById('menu-pb').textContent = `PB: ${this.pb}`;
             }
 
             goHome() {
-                clearInterval(this.state.timer);
+                clearInterval(this.timerInterval);
                 this.state.mode = 'MENU';
                 this.switchView('MENU');
             }
 
-            showPracticeMenu() {
-                this.switchView('PRACTICE');
+            showPracticeMenu() { this.switchView('PRACTICE'); }
+
+            toggleHistory() {
+                const modal = this.el.modals.history;
+                if (modal.classList.contains('hidden')) {
+                    const list = document.getElementById('history-list');
+                    if (this.history.length === 0) {
+                        list.innerHTML = '<div class="text-gray-500 text-center text-sm py-4">No history yet.</div>';
+                    } else {
+                        list.innerHTML = this.history.map(h => `
+                            <div class="flex justify-between items-center bg-gray-900/50 p-3 rounded border border-gray-700">
+                                <span class="text-gray-400 text-xs">${h.date}</span>
+                                <span class="font-mono font-bold text-indigo-400">${h.score} pts</span>
+                            </div>
+                        `).join('');
+                    }
+                    modal.classList.remove('hidden');
+                } else {
+                    modal.classList.add('hidden');
+                }
+            }
+            
+            showHint() {
+                const hint = this.state.problem.hint || "No hint available.";
+                this.el.game.hintText.textContent = hint;
+                this.el.game.hintBox.classList.remove('hidden');
+            }
+            
+            hideHint() {
+                this.el.game.hintBox.classList.add('hidden');
             }
 
-            // --- Modes ---
+            // --- GAME MODES ---
 
             startCareer() {
-                this.state.mode = 'CAREER';
-                this.state.level = this.careerLevel;
-                this.state.streak = this.careerStreak;
-                this.el.timerContainer.classList.add('hidden');
+                this.state = { ...this.state, mode: 'CAREER', level: this.career.level, streak: this.career.streak, score: 0 };
+                this.el.game.timerCont.classList.add('hidden');
+                this.el.game.multiplier.classList.add('hidden');
                 this.startRound();
             }
 
-            startPractice(level) {
-                this.state.mode = 'PRACTICE';
-                this.state.level = level;
-                this.state.streak = 0;
-                this.el.timerContainer.classList.add('hidden');
+            startPractice(lvl) {
+                this.state = { ...this.state, mode: 'PRACTICE', level: lvl, streak: 0, score: 0 };
+                this.el.game.timerCont.classList.add('hidden');
+                this.el.game.multiplier.classList.add('hidden');
                 this.startRound();
             }
 
             startTimed() {
-                this.state.mode = 'TIMED';
-                this.state.score = 0;
-                this.state.timeLeft = 600; 
-                this.el.timerContainer.classList.remove('hidden');
-                this.startRound();
+                this.state = { 
+                    ...this.state, 
+                    mode: 'TIMED', 
+                    level: 1, 
+                    score: 0, 
+                    rawSolved: 0,
+                    streak: 0, 
+                    multiplier: 1, 
+                    timeLeft: 300, 
+                    recentProblems: []
+                };
                 
-                this.state.timer = setInterval(() => {
-                    this.state.timeLeft--;
-                    const pct = (this.state.timeLeft / 600) * 100;
-                    this.el.timerBar.style.width = `${pct}%`;
-                    
-                    if (pct < 20) this.el.timerBar.className = 'h-full bg-red-500 transition-all duration-1000 ease-linear';
-                    else this.el.timerBar.className = 'h-full bg-orange-500 transition-all duration-1000 ease-linear';
+                this.el.game.timerCont.classList.remove('hidden');
+                this.el.game.multiplier.classList.remove('hidden');
+                this.startRound();
 
-                    if (this.state.timeLeft <= 0) {
-                        this.endTimedMode();
-                    }
+                this.timerInterval = setInterval(() => {
+                    this.state.timeLeft--;
+                    const pct = (this.state.timeLeft / 300) * 100;
+                    this.el.game.timerBar.style.width = `${pct}%`;
+                    
+                    if (pct < 20) this.el.game.timerBar.className = 'h-full bg-red-500 transition-all duration-1000 linear shadow-[0_0_15px_red]';
+                    
+                    if (this.state.timeLeft <= 0) this.endTimedMode();
                 }, 1000);
             }
 
-            endTimedMode() {
-                clearInterval(this.state.timer);
-                this.el.finalScore.textContent = this.state.score;
-                this.switchView('RESULTS');
-            }
-
-            // --- Binary UI Helpers ---
-
-            toggleHint() {
-                this.el.problemArea.classList.toggle('show-hint');
-            }
-
-            toggleHelp() {
-                this.el.helpModal.classList.toggle('hidden');
-            }
-
-            toggleBit(btnElement) {
-                // For Level 7 "Write Binary"
-                const value = parseInt(btnElement.dataset.power);
-                const isOn = btnElement.classList.contains('bit-on');
-                
-                if (isOn) {
-                    // Turn Off
-                    btnElement.classList.remove('bit-on');
-                    btnElement.classList.add('bit-off');
-                    btnElement.textContent = '0';
-                    this.state.binaryLevel7State -= value;
-                } else {
-                    // Turn On
-                    btnElement.classList.remove('bit-off');
-                    btnElement.classList.add('bit-on');
-                    btnElement.textContent = '1';
-                    this.state.binaryLevel7State += value;
-                }
-                
-                // Update hidden input so validator works
-                // NOTE: Problem Answer for Lvl 7 is stored as Binary String '1010'
-                // But we want to check if the decimal values match? 
-                // Let's standardize: The app checks input.value vs problem.answer.
-                // For Lvl 7, problem.answer is "1010" (string). 
-                // We need to convert current decimal state to binary string and put in input.
-                
-                // Find total bits used to pad correctly
-                const bitsCount = this.el.problemArea.querySelectorAll('.bit-interactive').length;
-                const binaryStr = this.state.binaryLevel7State.toString(2).padStart(bitsCount, '0');
-                
-                this.el.input.value = binaryStr;
-            }
-
-            // --- Game Logic ---
+            // --- GAME LOOP ---
 
             startRound() {
                 this.switchView('GAME');
-                this.generateNextProblem();
-                this.updateUI();
+                this.hideHint();
                 
-                // Reset State
-                this.el.feedback.classList.add('hidden');
-                this.state.isSubmitting = false;
-                this.el.problemArea.classList.remove('show-hint'); // Hide hints by default
-                
-                // UI specifics for Binary vs Normal
-                if (this.state.level === 6 || this.state.level === 7) {
-                    this.el.binaryControls.classList.remove('hidden');
-                } else {
-                    this.el.binaryControls.classList.add('hidden');
-                }
-
-                if (this.state.level === 7) {
-                    this.el.input.classList.add('hidden'); // Hide typing input
-                    this.el.input.value = "0".repeat(this.state.currentProblem.bits || 4); // Default 0000
-                    this.state.binaryLevel7State = 0;
-                    this.el.input.disabled = false;
-                } else {
-                    this.el.input.classList.remove('hidden');
-                    this.el.input.value = '';
-                    this.el.input.disabled = false;
-                }
-            }
-
-            updateUI() {
+                // Dynamic Difficulty for Timed Mode
                 if (this.state.mode === 'TIMED') {
-                    const mins = Math.floor(this.state.timeLeft / 60);
-                    const secs = this.state.timeLeft % 60;
-                    this.el.infoLeft.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
-                    this.el.infoRight.textContent = `Score: ${this.state.score}`;
-                } else {
-                    let lvlName = `Level ${this.state.level}`;
-                    if(this.state.level === 6) lvlName = "Lvl 6: Read Binary";
-                    if(this.state.level === 7) lvlName = "Lvl 7: Write Binary";
+                    this.state.level = this.getDynamicLevel();
+                }
 
-                    this.el.infoLeft.textContent = this.state.mode === 'PRACTICE' 
-                        ? `Practice ${lvlName.replace('Lvl ','')}` 
-                        : lvlName;
-                    this.el.infoRight.textContent = `Streak: ${this.state.streak}`;
+                // Generate Problem
+                let problem, id;
+                let attempts = 0;
+                do {
+                    problem = this.generateProblem(this.state.level);
+                    id = problem.id;
+                    attempts++;
+                } while (this.state.recentProblems.includes(id) && attempts < 5);
+
+                this.state.recentProblems.push(id);
+                if (this.state.recentProblems.length > 30) this.state.recentProblems.shift();
+
+                this.state.problem = problem;
+                this.el.game.area.innerHTML = problem.html;
+
+                this.resetInputUI(); // Sets up correct inputs (text vs buttons vs switches)
+                this.updateGameHeader();
+            }
+
+            getDynamicLevel() {
+                const s = this.state.score;
+                if (s < 50) return Random.weighted([1, 2, 3], [40, 40, 20]);
+                if (s < 150) return Random.weighted([3, 4, 5, 6, 8], [20, 20, 20, 20, 20]);
+                if (s < 300) return Random.weighted([5, 7, 8, 9, 10], [15, 15, 20, 25, 25]);
+                return Random.weighted([9, 10], [30, 70]);
+            }
+
+            updateGameHeader() {
+                if (this.state.mode === 'TIMED') {
+                    const m = Math.floor(this.state.timeLeft / 60);
+                    const s = this.state.timeLeft % 60;
+                    this.el.game.infoLeft.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+                    
+                    this.updateMultiplier();
+                    this.el.game.infoRight.textContent = this.state.score;
+                    this.el.game.infoRight.classList.add('text-indigo-400', 'text-xl');
+                } else {
+                    let name = `Level ${this.state.level}`;
+                    if (this.state.level === 8) name = "Modulo %";
+                    if (this.state.level === 9) name = "Primes";
+                    if (this.state.level === 10) name = "CHAOS";
+                    this.el.game.infoLeft.textContent = name;
+                    this.el.game.infoRight.textContent = `Streak: ${this.state.streak}`;
                 }
             }
 
+            updateMultiplier() {
+                const s = this.state.streak;
+                let m = 1;
+                let color = "bg-gray-700 text-gray-400";
+                
+                if (s >= 5) { m = 2; color = "bg-blue-600 text-white shadow-[0_0_10px_#2563eb]"; }
+                if (s >= 15) { m = 3; color = "bg-purple-600 text-white shadow-[0_0_15px_#9333ea]"; }
+                if (s >= 30) { m = 5; color = "bg-orange-500 text-white shadow-[0_0_20px_#f97316] multiplier-pulse"; }
+
+                this.state.multiplier = m;
+                const badge = this.el.game.multiplier;
+                badge.className = `px-2 py-0.5 rounded-full font-black italic text-xs transition-all duration-300 ${color}`;
+                badge.textContent = `${m}x`;
+            }
+
+            resetInputUI() {
+                this.state.isSubmitting = false;
+                this.el.game.feedback.classList.add('hidden');
+                
+                // Hide all input types first
+                this.el.game.form.classList.add('hidden');
+                this.el.game.boolControls.classList.add('hidden');
+                this.el.game.binSubmit.classList.add('hidden');
+                
+                const type = this.state.problem.type;
+
+                if (type === 'binary_write') {
+                    // Show Binary Confirm Button
+                    this.el.game.binSubmit.classList.remove('hidden');
+                    this.state.binaryValue = 0; // Reset internal counter
+                } 
+                else if (type === 'boolean') {
+                    // Show Yes/No Buttons
+                    this.el.game.boolControls.classList.remove('hidden');
+                } 
+                else {
+                    // Standard Text Input
+                    this.el.game.form.classList.remove('hidden');
+                    this.el.game.input.value = '';
+                    this.el.game.input.disabled = false;
+                    setTimeout(() => this.el.game.input.focus(), 50);
+                }
+            }
+
+            // --- INTERACTION ---
+
+            toggleBit(btn) {
+                const val = parseInt(btn.dataset.power);
+                const isOn = btn.classList.contains('bit-on');
+                
+                if (isOn) {
+                    btn.classList.replace('bit-on', 'bit-off');
+                    btn.textContent = '0';
+                    this.state.binaryValue -= val;
+                } else {
+                    btn.classList.replace('bit-off', 'bit-on');
+                    btn.textContent = '1';
+                    this.state.binaryValue += val;
+                }
+            }
+
+            // Handler for Standard Input
             handleSubmit(e) {
                 e.preventDefault();
                 if (this.state.isSubmitting) return;
-
-                const inputVal = this.el.input.value.trim().toLowerCase();
-                const correctVal = this.state.currentProblem.answer.toString().toLowerCase();
-                
-                const isCorrect = inputVal === correctVal;
-
-                this.handleFeedback(isCorrect, this.state.currentProblem.answer);
+                const userVal = this.el.game.input.value.trim().toLowerCase();
+                const correctVal = this.state.problem.answer.toString().toLowerCase();
+                this.handleResult(userVal === correctVal);
             }
 
-            handleFeedback(isCorrect, realAnswer) {
+            // Handler for Yes/No
+            submitBoolean(val) {
+                if (this.state.isSubmitting) return;
+                this.handleResult(val === this.state.problem.answer);
+            }
+
+            // Handler for Binary Write
+            submitBinary() {
+                if (this.state.isSubmitting) return;
+                this.handleResult(this.state.binaryValue === this.state.problem.answer);
+            }
+
+            handleResult(isCorrect) {
                 this.state.isSubmitting = true;
-                this.el.input.disabled = true;
+                this.el.game.input.disabled = true;
+                
+                const fb = this.el.game.feedback;
+                fb.classList.remove('hidden', 'bg-red-900', 'text-red-200', 'bg-green-900', 'text-green-200');
 
-                this.el.feedback.classList.remove('hidden', 'bg-red-900', 'text-red-200', 'bg-green-900', 'text-green-200');
                 if (isCorrect) {
-                    this.el.feedback.textContent = Random.from(['Correct!', 'Nice!', 'Spot on!', 'Good job!', 'Fast!']);
-                    this.el.feedback.classList.add('bg-green-900', 'text-green-200');
-                } else {
-                    // For binary read mode, answer is decimal. For write mode, answer is binary string.
-                    let displayAns = realAnswer;
-                    if (this.state.level === 7) {
-                        displayAns = parseInt(realAnswer, 2); // Show decimal answer if they failed to build it
-                        this.el.feedback.innerHTML = `Wrong. Target was: <span class="font-mono">${displayAns}</span>`;
-                    } else {
-                        this.el.feedback.innerHTML = `Wrong. Answer: <span class="font-mono font-bold">${realAnswer}</span>`;
+                    const basePoints = 10; 
+                    const points = basePoints * this.state.multiplier;
+                    this.state.streak++;
+                    if(this.state.streak > this.state.maxStreak) this.state.maxStreak = this.state.streak;
+                    
+                    if (this.state.mode === 'TIMED') {
+                        this.state.score += points;
+                        this.state.rawSolved++;
                     }
-                    this.el.feedback.classList.add('bg-red-900', 'text-red-200');
-                }
-                this.el.feedback.classList.remove('hidden');
 
-                if (isCorrect) {
-                    if (this.state.mode === 'TIMED') this.state.score++;
                     if (this.state.mode === 'CAREER') {
-                        this.state.streak++;
-                        this.careerStreak = this.state.streak;
-                        if (this.state.streak >= 5) {
+                        this.career.streak = this.state.streak;
+                        if (this.career.streak >= 5) {
+                            this.career.streak = 0;
+                            this.career.level++;
                             this.state.streak = 0;
                             this.state.level++;
-                            this.careerStreak = 0;
-                            this.careerLevel = this.state.level;
-                            if (this.state.level > 7) {
-                                this.state.level = 1;
-                                this.careerLevel = 1;
-                            }
+                            if (this.state.level > 10) this.state.level = 1; 
+                            this.career.level = this.state.level;
                         }
-                        localStorage.setItem('mm_career', JSON.stringify({ level: this.careerLevel, streak: this.careerStreak }));
+                        localStorage.setItem('mm_career', JSON.stringify(this.career));
                     }
-                    if (this.state.mode === 'PRACTICE') this.state.streak++;
+
+                    fb.textContent = (this.state.mode === 'TIMED') ? `Correct! +${points}` : "Correct!";
+                    fb.classList.add('bg-green-900', 'text-green-200');
+
                 } else {
+                    this.state.streak = 0;
                     if (this.state.mode === 'CAREER') {
-                        this.state.streak = 0;
-                        this.careerStreak = 0;
-                        localStorage.setItem('mm_career', JSON.stringify({ level: this.careerLevel, streak: 0 }));
+                        this.career.streak = 0;
+                        localStorage.setItem('mm_career', JSON.stringify(this.career));
                     }
-                    if (this.state.mode === 'PRACTICE') this.state.streak = 0;
+                    
+                    let disp = this.state.problem.answer;
+                    if(this.state.problem.type === 'boolean') disp = disp ? "YES" : "NO";
+                    
+                    fb.innerHTML = `Wrong. Answer: <span class="font-mono bg-black/20 px-1 rounded">${disp}</span>`;
+                    fb.classList.add('bg-red-900', 'text-red-200');
                 }
 
                 setTimeout(() => {
                     this.startRound();
-                }, isCorrect ? 800 : 2500);
+                }, isCorrect ? 600 : 2000);
             }
 
-            // --- Generator Engine ---
+            endTimedMode() {
+                clearInterval(this.timerInterval);
+                const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                this.history.unshift({ date, score: this.state.score });
+                if (this.history.length > 10) this.history.pop();
+                localStorage.setItem('mm_history', JSON.stringify(this.history));
 
-            generateNextProblem() {
-                let lvl = this.state.level;
-                let difficulty = 'normal';
-
-                if (this.state.mode === 'TIMED') {
-                    // Include Level 7 in Timed mode? Maybe keep it simple with 1-6 for now or occasional 7
-                    lvl = Random.weighted([1, 2, 3, 4, 5, 6, 7], [25, 20, 15, 10, 10, 10, 10]);
-                    difficulty = 'random'; 
-                } else if (this.state.mode === 'CAREER') {
-                    difficulty = this.state.streak > 2 ? 'hard' : 'normal';
+                const isPB = this.state.score > this.pb;
+                if (isPB) {
+                    this.pb = this.state.score;
+                    localStorage.setItem('mm_pb', this.pb);
+                    this.updateMenuPB();
                 }
 
-                const p = this.getProblemByLevel(lvl, difficulty);
-                this.state.currentProblem = p;
-                this.el.problemArea.innerHTML = p.html;
+                this.el.results.score.textContent = this.state.score;
+                this.el.results.count.textContent = this.state.rawSolved;
+                this.el.results.streak.textContent = this.state.maxStreak;
+                
+                if (isPB) this.el.results.badge.classList.remove('hidden');
+                else this.el.results.badge.classList.add('hidden');
+
+                this.switchView('RESULTS');
             }
 
-            getProblemByLevel(level, difficulty) {
-                const r = (min, max) => Random.int(min, max);
-                
+            // --- PROBLEM GENERATOR ENGINE ---
+
+            generateProblem(level) {
+                const r = Random;
+                let html = '', answer = 0, id = '', type = 'standard', hint = '';
+                const m = (txt) => `<span class="font-mono font-bold">${txt}</span>`;
+
                 switch(level) {
                     case 1: // Arithmetic
                         {
-                            const type = Random.from(['+', '-', '*', '/']);
-                            if(type === '+') {
-                                if (difficulty === 'hard' && Random.bool()) {
-                                    const a = r(5, 50), b = r(5, 50), c = r(5, 50);
-                                    return { html: `<span class="text-5xl font-mono">${a} + ${b} + ${c}</span>`, answer: a+b+c };
-                                }
-                                const a = r(15, 150), b = r(15, 150);
-                                return { html: `<span class="text-5xl font-mono">${a} + ${b}</span>`, answer: a+b };
-                            }
-                            if(type === '-') {
-                                const a = r(30, 200), b = r(10, a - 5);
-                                return { html: `<span class="text-5xl font-mono">${a} - ${b}</span>`, answer: a-b };
-                            }
-                            if(type === '*') {
-                                const a = r(3, 15), b = r(3, 15);
-                                return { html: `<span class="text-5xl font-mono">${a} &times; ${b}</span>`, answer: a*b };
-                            }
-                            if(type === '/') {
-                                const ans = r(3, 15), b = r(3, 15);
-                                return { html: `<span class="text-5xl font-mono">${ans*b} &div; ${b}</span>`, answer: ans };
-                            }
-                        }
-                        break;
-                    
-                    case 2: // Complex Arithmetic
+                            const op = r.from(['+', '-', '*', '/']);
+                            if(op==='+'){ const a=r.int(10,99), b=r.int(10,99); answer=a+b; html=`${m(a)} + ${m(b)}`; id=`l1_add_${a}_${b}`; hint="Add the tens first, then the ones."; }
+                            if(op==='-'){ const a=r.int(20,99), b=r.int(5,a-5); answer=a-b; html=`${m(a)} - ${m(b)}`; id=`l1_sub_${a}_${b}`; hint="Subtract tens, then ones."; }
+                            if(op==='*'){ const a=r.int(2,12), b=r.int(2,12); answer=a*b; html=`${m(a)} &times; ${m(b)}`; id=`l1_mul_${a}_${b}`; hint="Recall your multiplication tables."; }
+                            if(op==='/'){ const ans=r.int(2,12), b=r.int(2,12); const a=ans*b; answer=ans; html=`${m(a)} &div; ${m(b)}`; id=`l1_div_${a}_${b}`; hint="Multiplication in reverse. What number times " + b + " equals " + a + "?"; }
+                        } break;
+                    case 2: // Complex
                         {
-                            const type = Random.int(1, 5);
-                            if (type === 1) { // Squares
-                                const base = r(5, 15);
-                                const sub = r(5, 30);
-                                return { html: `<span class="text-5xl font-mono">${base}² - ${sub}</span>`, answer: (base*base)-sub };
+                            const type = r.int(1,2);
+                            if(type===1){ 
+                                const b=r.int(4,12), sub=r.int(5,20); answer=b*b-sub; html=`${m(b)}² - ${m(sub)}`; id=`l2_sq_${b}_${sub}`; 
+                                hint=`${b} times ${b} is ${b*b}. Subtract ${sub}.`;
+                            } else { 
+                                const a=r.int(2,8), b=r.int(2,8), c=r.int(2,5); answer=(a+b)*c; html=`(${m(a)} + ${m(b)}) &times; ${m(c)}`; id=`l2_mix_${a}_${b}_${c}`; 
+                                hint=`Do the brackets first: ${a+b}. Then multiply by ${c}.`;
                             }
-                            if (type === 2) { // (a+b)*c
-                                const a = r(2, 10), b = r(2, 10), c = r(2, 6);
-                                return { html: `<span class="text-4xl font-mono">(${a} + ${b}) &times; ${c}</span>`, answer: (a+b)*c };
-                            }
-                            // Fallback
-                            const a = r(50, 200), b = r(50, 200);
-                            return { html: `<span class="text-4xl font-mono">${a} + ${b}</span>`, answer: a+b };
-                        }
-                        break;
-
-                    case 3: // Fractions/%
+                        } break;
+                    case 3: // Fractions/Pct
                         {
-                            const type = Random.int(1, 2);
-                            if (type === 1) { // Percentages
-                                const pcts = difficulty === 'hard' ? [5, 15, 30, 75] : [10, 20, 25, 50];
-                                const p = Random.from(pcts);
-                                const safeBase = r(1, 10) * 20; 
-                                return { html: `<span class="text-4xl font-mono">${p}% of ${safeBase}</span>`, answer: (p/100)*safeBase };
+                            if(r.bool()) {
+                                const p=r.from([10,20,25,50]); const v=r.int(2,10)*20; answer=(p/100)*v; 
+                                html=`${m(p)}% of ${m(v)}`; id=`l3_pct_${p}_${v}`;
+                                if(p===50) hint="Divide by 2."; else if(p===25) hint="Divide by 4."; else if(p===10) hint="Divide by 10 (remove zero)."; else hint="Divide by 10, then multiply by 2.";
+                            } else {
+                                const d=r.from([2,3,4,5]); const n=r.int(1,d-1); const v=r.int(2,12)*d; answer=(n/d)*v;
+                                html=`<sup>${n}</sup>&frasl;<sub>${d}</sub> of ${m(v)}`; id=`l3_frac_${n}_${d}_${v}`;
+                                hint=`Divide ${v} by ${d}, then multiply the result by ${n}.`;
                             }
-                            // Fractions
-                            const den = Random.from([2, 3, 4, 5, 8, 10]);
-                            const num = r(1, den-1);
-                            const mult = r(2, 12) * den;
-                            return { html: `<span class="text-4xl font-mono"><sup>${num}</sup>&frasl;<sub>${den}</sub> of ${mult}</span>`, answer: (num/den)*mult };
-                        }
-                        break;
-
+                        } break;
                     case 4: // Algebra
                         {
-                            const v = Random.from(['x', 'y', 'a']);
-                            const type = Random.int(1, 2);
-                            if (type === 1) { // ax - b = c
-                                const x = r(2, 12);
-                                const a = r(2, 9);
-                                const b = r(1, 20);
-                                const c = a*x - b;
-                                return { html: `<div class="text-3xl">${a}${v} - ${b} = ${c}</div><div class="mt-2 text-indigo-400">${v} = ?</div>`, answer: x };
+                            const x=r.int(2,12), a=r.int(2,9), b=r.int(1,15); const c=a*x-b;
+                            html=`<div class="text-3xl">${m(a)}x - ${m(b)} = ${m(c)}</div><div class="mt-2 text-indigo-400 text-sm">x = ?</div>`;
+                            answer=x; id=`l4_alg_${a}_${b}_${c}`;
+                            hint=`Add ${b} to ${c}, then divide by ${a}.`;
+                        } break;
+                    case 5: // Sequences
+                        {
+                            const s=r.int(1,20), step=r.int(2,10); answer=s+step*4;
+                            html=`${m(s)}, ${m(s+step)}, ${m(s+step*2)}, ${m(s+step*3)}, <span class="text-indigo-400">?</span>`;
+                            id=`l5_seq_${s}_${step}`;
+                            hint=`The numbers increase by ${step} each time.`;
+                        } break;
+                    case 6: // Read Binary
+                        {
+                            const bits=r.weighted([4,5,6],[50,30,20]); answer=r.int(1, Math.pow(2,bits)-1);
+                            const binStr = answer.toString(2).padStart(bits,'0');
+                            html = `<div class="text-xs text-gray-500 mb-4">CONVERT TO DECIMAL</div>` + this.renderBinarySwitches(binStr, bits, false);
+                            id=`l6_bin_${answer}`;
+                            hint="Add up the numbers under the switches that are ON (1). Values are 1, 2, 4, 8, 16, 32 from right to left.";
+                        } break;
+                    case 7: // Write Binary
+                        {
+                            const bits=r.weighted([4,5],[60,40]); const val=r.int(1, Math.pow(2,bits)-1);
+                            answer=val;
+                            html = `<div class="text-xs text-gray-500 mb-2">MAKE THIS NUMBER:</div>
+                                    <div class="text-5xl font-mono font-bold text-indigo-400 mb-6">${val}</div>
+                                    ${this.renderBinarySwitches("0".repeat(bits), bits, true)}`;
+                            id=`l7_binw_${val}`;
+                            type = 'binary_write';
+                            hint="Toggle switches (ON/1) until their values sum up to the target number. Start with the largest number that fits.";
+                        } break;
+                    case 8: // Modulo
+                        {
+                            const d=r.int(3,12); const mul=r.int(2,10); const rem=r.int(1,d-1);
+                            const num = (d*mul) + rem;
+                            html=`${m(num)} % ${m(d)}`; answer=rem; id=`l8_mod_${num}_${d}`;
+                            hint=`What is the remainder when you divide ${num} by ${d}?`;
+                        } break;
+                    case 9: // Is it Prime? (Boolean)
+                        {
+                            let num;
+                            const isPrime = r.bool();
+                            if(isPrime) {
+                                num = Random.from(PRIMES);
+                            } else {
+                                // Generate composite
+                                do { num = r.int(4, 150); } while(PRIMES.includes(num));
                             }
-                             const x = r(2, 9);
-                             return { html: `<div class="text-3xl">${v}² = ${x*x}</div><div class="mt-2 text-indigo-400">${v} = ?</div>`, answer: x };
-                        }
-                        break;
-
-                    case 5: // Logic
+                            answer = isPrime;
+                            html = `<div class="text-sm text-gray-400 mb-2">IS THIS PRIME?</div><div class="text-6xl font-mono font-bold">${num}</div>`;
+                            id=`l9_prime_${num}`;
+                            type = 'boolean';
+                            hint=`A prime number is only divisible by 1 and itself. Try dividing by 2, 3, 5, 7.`;
+                        } break;
+                    case 10: // CHAOS MODE
                         {
-                            const start = r(1, 50);
-                            const step = r(2, 12);
-                            return { 
-                                html: `<span class="text-3xl tracking-widest font-mono">${start}, ${start+step}, ${start+step*2}, ${start+step*3}, ?</span>`, 
-                                answer: start+step*4 
-                            };
-                        }
-                        break;
-
-                    case 6: // READ BINARY (Binary -> Decimal)
-                        {
-                            // "Expert Mode": Only show bits. Hints hidden by default.
-                            const bits = Random.weighted([4, 5, 6, 8], [40, 30, 20, 10]);
-                            const maxVal = Math.pow(2, bits) - 1;
-                            const value = r(1, maxVal);
-                            const binaryString = value.toString(2).padStart(bits, '0');
-                            
-                            let visualBits = '<div class="flex justify-center gap-2 md:gap-3 flex-wrap">';
-                            binaryString.split('').forEach((bit, index) => {
-                                const power = Math.pow(2, bits - 1 - index);
-                                const isOn = bit === '1';
-                                const styleClass = isOn ? 'bit-on' : 'bit-off';
-                                visualBits += `
-                                    <div class="flex flex-col items-center">
-                                        <div class="w-10 h-14 md:w-12 md:h-16 rounded-lg border-2 flex items-center justify-center font-mono text-xl md:text-2xl font-bold mb-1 bit-switch ${styleClass}">
-                                            ${bit}
-                                        </div>
-                                        <span class="text-xs text-indigo-400 font-mono hint-text">${power}</span>
-                                    </div>
-                                `;
-                            });
-                            visualBits += '</div>';
-
-                            return { 
-                                html: `<div><div class="text-sm text-gray-400 mb-4">What number is this?</div>${visualBits}</div>`, 
-                                answer: value 
-                            };
-                        }
-                        break;
-
-                    case 7: // WRITE BINARY (Decimal -> Binary)
-                        {
-                            const bits = Random.weighted([4, 5, 6], [50, 30, 20]);
-                            const maxVal = Math.pow(2, bits) - 1;
-                            const targetValue = r(1, maxVal);
-                            const correctBinary = targetValue.toString(2).padStart(bits, '0');
-                            
-                            let visualBits = '<div class="flex justify-center gap-2 md:gap-3 flex-wrap">';
-                            for(let i=0; i<bits; i++) {
-                                const power = Math.pow(2, bits - 1 - i);
-                                // All start OFF
-                                visualBits += `
-                                    <div class="flex flex-col items-center">
-                                        <div data-power="${power}" class="w-10 h-14 md:w-12 md:h-16 rounded-lg border-2 flex items-center justify-center font-mono text-xl md:text-2xl font-bold mb-1 bit-switch bit-off bit-interactive transition-transform hover:scale-105">
-                                            0
-                                        </div>
-                                        <span class="text-xs text-indigo-400 font-mono hint-text">${power}</span>
-                                    </div>
-                                `;
+                            const chaosType = r.int(1,2);
+                            if(chaosType === 1) { // Binary + Decimal Addition
+                                const valBin = r.int(1, 15);
+                                const valDec = r.int(5, 50);
+                                const binStr = valBin.toString(2);
+                                html = `<div class="flex items-center justify-center gap-4 text-3xl chaos-text">
+                                            <span class="font-mono text-green-400">${binStr}<sub class="text-xs">2</sub></span> 
+                                            <span>+</span> 
+                                            <span class="font-mono">${valDec}</span>
+                                        </div>`;
+                                answer = valBin + valDec;
+                                id = `l10_chaos_add_${valBin}_${valDec}`;
+                                hint = `Convert ${binStr} (base 2) to decimal first, then add.`;
+                            } else { // Binary - Decimal
+                                const valBin = r.int(8, 31);
+                                const valDec = r.int(1, 7);
+                                const binStr = valBin.toString(2);
+                                html = `<div class="flex items-center justify-center gap-4 text-3xl chaos-text">
+                                            <span class="font-mono text-green-400">${binStr}<sub class="text-xs">2</sub></span> 
+                                            <span>-</span> 
+                                            <span class="font-mono">${valDec}</span>
+                                        </div>`;
+                                answer = valBin - valDec;
+                                id = `l10_chaos_sub_${valBin}_${valDec}`;
+                                hint = `Convert ${binStr} (base 2) to decimal first, then subtract.`;
                             }
-                            visualBits += '</div>';
-
-                            return {
-                                html: `<div>
-                                    <div class="text-sm text-gray-400 mb-2">Make this number:</div>
-                                    <div class="text-5xl font-mono font-bold text-indigo-400 mb-6">${targetValue}</div>
-                                    ${visualBits}
-                                </div>`,
-                                answer: correctBinary, // Expected input value
-                                bits: bits
-                            };
-                        }
-                        break;
+                            document.body.classList.add('chaos-active');
+                            setTimeout(() => document.body.classList.remove('chaos-active'), 500);
+                        } break;
                 }
-                return { html: 'Error', answer: 0 };
+
+                if(!html.includes('div') && !html.includes('span')) html = `<span class="text-5xl">${html}</span>`;
+                else if(!html.includes('text-')) html = `<div class="text-5xl">${html}</div>`;
+                
+                return { html, answer, id, type, hint };
+            }
+
+            renderBinarySwitches(binStr, count, interactive) {
+                let h = '<div class="flex justify-center gap-2 flex-wrap">';
+                for(let i=0; i<count; i++) {
+                    const power = Math.pow(2, count - 1 - i);
+                    const isOn = binStr[i] === '1';
+                    const cls = isOn ? 'bit-on' : 'bit-off';
+                    const interact = interactive ? 'bit-interactive cursor-pointer hover:scale-105' : '';
+                    h += `
+                        <div class="flex flex-col items-center">
+                            <div data-power="${power}" class="w-10 h-14 rounded border-2 flex items-center justify-center font-mono text-xl font-bold mb-1 bit-switch ${cls} ${interact}">
+                                ${isOn ? '1' : '0'}
+                            </div>
+                            <span class="text-[10px] text-indigo-400 font-mono hint-text">${power}</span>
+                        </div>`;
+                }
+                return h + '</div>';
             }
         }
 
         const app = new MentalMathApp();
         window.app = app;
 
-        // Fullscreen Toggle Logic
         document.getElementById('fullscreen-btn').addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.log(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-                });
-            } else {
-                document.exitFullscreen();
-            }
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(console.log);
+            else document.exitFullscreen();
         });
-
     </script>
 </body>
 </html>
